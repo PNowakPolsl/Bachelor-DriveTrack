@@ -1,6 +1,8 @@
 import {Car, TrendingUp, PieChart, Bell} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function MainMenu() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen flex flex-col">
       <section className="bg-white">
@@ -21,7 +23,7 @@ export default function MainMenu() {
           Prosty sposób na rejestrowanie kosztów paliwa, napraw i ubezpieczenia. Kontroluj wydatki na pojazd dzięki intuicyjnemu śledzeniu i wnikliwym analizom
         </p>
         <div className="mt-8 flex flex-row gap-6 justify-center">
-          <button className="px-8 py-3 bg-blue-600 text-white text-xl font-semibold rounded-xl shadow-md hover:bg-blue-500 transition duration-300">
+          <button onClick={() => navigate ("/register")} className="px-8 py-3 bg-blue-600 text-white text-xl font-semibold rounded-xl shadow-md hover:bg-blue-500 transition duration-300">
             Rejestracja
           </button>
           <button className="px-8 py-3 bg-white text-gray-800 text-xl font-semibold rounded-xl shadow-md hover:bg-blue-600 hover:text-white transition duration-300">
