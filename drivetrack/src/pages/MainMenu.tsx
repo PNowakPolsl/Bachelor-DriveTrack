@@ -26,7 +26,7 @@ export default function MainMenu() {
           <button onClick={() => navigate ("/register")} className="px-8 py-3 bg-blue-600 text-white text-xl font-semibold rounded-xl shadow-md hover:bg-blue-500 transition duration-300">
             Rejestracja
           </button>
-          <button className="px-8 py-3 bg-white text-gray-800 text-xl font-semibold rounded-xl shadow-md hover:bg-blue-600 hover:text-white transition duration-300">
+          <button onClick={() => navigate ("/login")} className="px-8 py-3 bg-white text-gray-800 text-xl font-semibold rounded-xl shadow-md hover:bg-blue-600 hover:text-white transition duration-300">
             Logowanie
           </button>
         </div>
