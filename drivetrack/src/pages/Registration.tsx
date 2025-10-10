@@ -37,7 +37,7 @@ export default function Registration() {
         }
 
         setError("");
-        navigate("/");
+        navigate("/dashboard");
 
     };
 
