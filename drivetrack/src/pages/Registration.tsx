@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function Registration() {
     const navigate = useNavigate();
 
-    { /* Obsługa walidacji */}
+    { /* Walidacja rejestracji */}
     const [formData, setFormData] = useState({
         name: "",
         email: "",
