@@ -1,16 +1,21 @@
 import { Car } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+    const navigate = useNavigate();
+
   return (
     <div className="min-h-screen flex flex-col items-center py-24 bg-gray-50">
         { /* Logo + Nagłówek */ }
         <div className="w-full flex flex-col items-center py-4">
-            <div className="flex items-center gap-3 bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-3 rounded-3xl shadow-md border border-blue-100">
+            <button 
+                onClick={() => navigate("/")}
+                className="flex items-center gap-3 bg-gradient-to-r from-blue-600 to-sky-500 px-6 py-3 rounded-3xl shadow-md border border-blue-100 hover:shadow-xl hover:scale-105 transition duration-300">
                     <Car className="w-10 h-10 text-white" />
                     <h1 className="text-3xl font-bold bg-white from-blue-600 to-sky-500 bg-clip-text text-transparent">
                         DriveTrack
                     </h1>
-            </div>
+            </button>
         </div>
         <p className="text-3xl text-center text-gray-800 font-bold">
           Witamy w DriveTrack
@@ -31,7 +36,7 @@ export default function Login() {
                         Email
                     </h2>
                     <input
-                        type="text"
+                        type="email"
                         placeholder="jankowalski@email.com"
                         className="px-4 py-3 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -49,6 +54,15 @@ export default function Login() {
                 <button className="px-6 py-3 bg-blue-600 text-white text-xl font-semibold rounded-xl shadow-md hover:bg-blue-500 transition duration-300">
                     Zaloguj
                 </button>
+
+                <p className="text-center text-gray-600 text-sm">
+                    Nie posiadasz konta?{" "}
+                    <button
+                    onClick={() => navigate("/register")}
+                    className="text-blue-600 font-semibold hover:underline hover:text-blue-700 transition">
+                        Zarejestruj się
+                    </button>
+                </p>
             </form>
         </div>
 
