@@ -26,12 +26,20 @@ export default function Sidebar(){
                                 : "hover:bg-blue-50 hover:text-blue-600"
                             )
                         }
-                        >
+                    >
                         <LayoutDashboard className="w-6 h-6" />
                         <span>Panel sterowania</span>
                     </button>
 
-                    <button className="flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">
+                    <button 
+                        onClick={() => navigate("/vehicles")}
+                        className={"flex items-center gap-4 px-4 py-3 rounded-lg transition " +
+                            (location.pathname === "/vehicles"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-blue-50 hover:text-blue-600"
+                            )
+                        }
+                    >
                         <Car className="w-6 h-6" />
                         <span>Pojazdy</span>
                     </button>
