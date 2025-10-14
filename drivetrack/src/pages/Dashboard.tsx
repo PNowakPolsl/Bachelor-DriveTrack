@@ -1,6 +1,7 @@
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import { Wallet, Fuel, Car } from "lucide-react";
+import MonthlyExpensesChart from "../components/MonthlyExpensesChart";
 
 export default function Dashboard() {
 
@@ -39,7 +40,7 @@ export default function Dashboard() {
                 Średnie spalanie
               </h3>
               <p className="text-3xl font-bold text-gray-800 mt-2">
-                7.4L/100km
+                7.4/100km
               </p>
             </div>
 
@@ -56,6 +57,8 @@ export default function Dashboard() {
             </div>
           </div>
 
+        <MonthlyExpensesChart />
+        
 
         </main>
       </div>
