@@ -1,18 +1,27 @@
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import { useState } from "react";
-import { X } from "lucide-react";
+import VehicleForm from "../components/VehicleForm";
+import { Fuel, Pencil, Trash } from "lucide-react";
+
 
 export default function Vehicles(){
     const [isFormOpen, setIsFormOpen] = useState(false);
 
-    const [formData, setFormData] = useState({
-        brand: "",
-        registration: "",
-        year: "",
-        kilometers: "",
-        fuelType: "benzyna",
-    });
+    const [vehicles, setVehicles] = useState<any[]>([
+        {
+            brand: "Volkswagen Golf 6",
+            registration: "SW 123987",
+            year: "2008",
+            kilometers: "250 497",
+            fuelType: "Benzyna + LPG",
+        }
+    ]); //zmienic podejscie jak bedzie dodawany back
+
+    const handleAddVehicle = (vehicleData: any) => {
+        setVehicles((prev) => [...prev, vehicleData]);
+        setIsFormOpen(false);
+    };
 
     return(
         <div className="min-h-screen bg-gray-50 flex">
@@ -36,68 +45,61 @@ export default function Vehicles(){
                         </button>
                     </div>
 
-                    {isFormOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative">
-                                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                                    Dodaj Pojazd
-                                </h2>
-                                <button
-                                    onClick={() => setIsFormOpen(false)}
-                                    className="text-gray-400 hover:text-gray-600 transition absolute top-4 right-4">
-                                        <X className="w-8 h-8"></X>
-                                </button>
-                                <form className="flex flex-col gap-4">
-                                    <input
-                                        type="text"
-                                        placeholder="Marka pojazdu"
-                                        value={formData.brand}
-                                        onChange={(e) => setFormData({ ...formData, brand: e.target.value})}
-                                        className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Numer rejestracyjny"
-                                        value={formData.registration}
-                                        onChange={(e) => setFormData({ ...formData, registration: e.target.value})}
-                                        className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    />
-                                    <input
-                                        type="number"
-                                        placeholder="Rok pojazdu"
-                                        value={formData.year}
-                                        onChange={(e) => setFormData({ ...formData, year: e.target.value})}
-                                        className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    />
-                                    <input
-                                        type="number"
-                                        placeholder="Przebieg"
-                                        value={formData.kilometers}
-                                        onChange={(e) => setFormData({ ...formData, kilometers: e.target.value})}
-                                        className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
-                                    />
-                                    <select
-                                        value={formData.fuelType}
-                                        onChange={(e) => setFormData({ ...formData, fuelType: e.target.value})}
-                                        className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <option value="benzyna">Benzyna</option>
-                                            <option value="diesel">Diesel</option>
-                                            <option value="benzyna+lpg">Benzyna + LPG</option>
-                                            <option value="elektryk">Elektryk</option>
-                                    </select>
+                {isFormOpen && 
+                    <VehicleForm 
+                        onClose={() => setIsFormOpen(false)}
+                        onAddVehicle={handleAddVehicle}
+                />}
 
-                                    <button 
-                                        type="submit"
-                                        className="text-lg font-semibold px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition">
-                                            Zapisz
-                                    </button>
-                                </form>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                    {vehicles.map((vehicle, index) => (
+                        <div
+                            key={index}
+                            className="bg-white rounded-2xl shadow-md p-6 border border-gray-100 relative"
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-800 capitalize">{vehicle.brand}</h3>
+                                    <p className="text-gray-500 text-sm">{vehicle.year}</p>
+                                </div>
+
+                                <div className="flex items-center gap-2 text-sm font-medium border bg-gray-200 border-gray-300 rounded-full px-3 py-1 text-gray-700 capitalize">
+                                    <Fuel className="w-4 h-4 text-gray-700"/> 
+                                    <span className="text-gray-700 font-bold capitalize text-sm">
+                                        {vehicle.fuelType}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 border-t border-gray-100 pt-4">
+                                <div className="flex justify-between text-gray-800 font-bold">
+                                    <span className="font-medium text-gray-500">Numer rejestracyjny</span>
+                                    <span className="uppercase">{vehicle.registration}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-800 font-bold">
+                                    <span className="font-medium text-gray-500">Przebieg</span>
+                                    <span>{vehicle.kilometers} km</span>
+                                </div>
+                            </div>
+
+                            <div className="flex mt-4 gap-2">
+                                <button
+                                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 transition"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                    Edytuj
+                                </button>
+                                <button
+                                    className="flex items-center justify-center bg-red-600 text-white p-2 rounded-lg hover:bg-red-500 transition"
+                                >
+                                    <Trash className="w-4 h-4" />
+                                </button>
                             </div>
                         </div>
-                    )}
+                    ))}
+                </div>
+
                 </main>
-
-
             </div>
         </div>
 
