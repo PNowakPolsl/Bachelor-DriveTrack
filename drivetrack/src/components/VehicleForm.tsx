@@ -5,11 +5,13 @@ import { X } from "lucide-react";
 interface VehicleFormPops{
     onClose: () => void;
     onAddVehicle: (vehicleData: any) => void;
+    initialData?: any | null;
 }
 
-export default function VehicleForm({ onClose, onAddVehicle }: VehicleFormPops){
+export default function VehicleForm({ onClose, onAddVehicle, initialData }: VehicleFormPops){
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState(
+        initialData || {
         brand: "",
         registration: "",
         year: "",
@@ -21,7 +23,7 @@ export default function VehicleForm({ onClose, onAddVehicle }: VehicleFormPops){
         e.preventDefault();
 
         if(!formData.brand || !formData.registration || !formData.year || !formData.kilometers){
-            alert("wypełnij wszystkie pola, aby dodać pojazd");
+            alert("Wypełnij wszystkie pola, aby dodać pojazd");
             return;
         }
         
@@ -32,7 +34,7 @@ export default function VehicleForm({ onClose, onAddVehicle }: VehicleFormPops){
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                    Dodaj Pojazd
+                    {initialData ? "Edytuj pojazd" : "Dodaj Pojazd"}
                 </h2>
                 <button
                     onClick={onClose}
@@ -88,7 +90,7 @@ export default function VehicleForm({ onClose, onAddVehicle }: VehicleFormPops){
                     <button 
                         type="submit"
                         className="text-lg font-semibold px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition">
-                            Zapisz
+                            {initialData? "Zapisz zmiany" : "Zapisz"}
                     </button>
                 </form>
             </div>

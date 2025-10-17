@@ -57,7 +57,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-        <MonthlyExpensesChart />
+          <MonthlyExpensesChart />
         
 
         </main>

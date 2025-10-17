@@ -44,7 +44,15 @@ export default function Sidebar(){
                         <span>Pojazdy</span>
                     </button>
 
-                    <button className="flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">
+                    <button 
+                        onClick={() => navigate("/expenses")}
+                        className={"flex items-center gap-4 px-4 py-3 rounded-lg transition " +
+                            (location.pathname === "/expenses"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-blue-50 hover:text-blue-600"
+                            )
+                        }
+                    >
                         <Wallet className="w-6 h-6" />
                         <span>Wydatki</span>
                     </button>
