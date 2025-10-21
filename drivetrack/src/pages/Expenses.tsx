@@ -100,7 +100,7 @@ export default function Expenses(){
                         />
                     }
 
-                    <div className="w-full mx-auto mt-6 p-4 border border-gray-300 rounded-2xl bg-white">
+                    <div className="w-full mx-auto mt-6 p-4 shadow-md rounded-2xl bg-white">
                         <h2 className="text-xl font-bold text-gray-800">
                             Wszystkie wydatki
                         </h2>

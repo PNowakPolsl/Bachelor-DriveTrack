@@ -82,7 +82,7 @@ export default function VehicleForm({ onClose, onAddVehicle, initialData }: Vehi
                     >
                             <option value="benzyna">Benzyna</option>
                             <option value="diesel">Diesel</option>
-                            <option value="benzyna+lpg">Benzyna + LPG</option>
+                            <option value="benzyna+LPG">Benzyna + LPG</option>
                             <option value="elektryk">Elektryk</option>
                             <option value="hybryda">Hybryda</option>
                     </select>

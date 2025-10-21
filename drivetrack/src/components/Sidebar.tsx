@@ -57,17 +57,38 @@ export default function Sidebar(){
                         <span>Wydatki</span>
                     </button>
 
-                    <button className="flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">
+                    <button onClick={() => navigate("/reports")}
+                        className={"flex items-center gap-4 px-4 py-3 rounded-lg transition " +
+                            (location.pathname === "/reports"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-blue-50 hover:text-blue-600"
+                            )
+                        }
+                    >
                         <BarChart3 className="w-6 h-6" />
                         <span>Raporty</span>
                     </button>
 
-                    <button className="flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">
+                    <button onClick={() => navigate("/reminders")}
+                        className={"flex items-center gap-4 px-4 py-3 rounded-lg transition " +
+                            (location.pathname === "/reminders"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-blue-50 hover:text-blue-600"
+                            )
+                        }
+                    >
                         <Bell className="w-6 h-6" />
                         <span>Przypomnienia</span>
                     </button>
 
-                    <button className="flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">
+                    <button onClick={() => navigate("/profile")}
+                        className={"flex items-center gap-4 px-4 py-3 rounded-lg transition " +
+                            (location.pathname === "/profile"
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-blue-50 hover:text-blue-600"
+                            )
+                        }
+                    >
                         <User className="w-6 h-6" />
                         <span>Profil</span>
                     </button>
