@@ -12,7 +12,9 @@ export default function VehicleForm({ onClose, onAddVehicle, initialData }: Vehi
 
     const [formData, setFormData] = useState(
         initialData || {
+        name: "",
         brand: "",
+        model: "",
         registration: "",
         year: "",
         kilometers: "",
@@ -22,7 +24,7 @@ export default function VehicleForm({ onClose, onAddVehicle, initialData }: Vehi
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if(!formData.brand || !formData.registration || !formData.year || !formData.kilometers){
+        if(!formData.name || !formData.model || !formData.brand || !formData.registration || !formData.year || !formData.kilometers){
             alert("Wypełnij wszystkie pola, aby dodać pojazd");
             return;
         }
@@ -44,9 +46,25 @@ export default function VehicleForm({ onClose, onAddVehicle, initialData }: Vehi
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <input
                         type="text"
+                        placeholder="Nazwa własna pojazdu"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value})}
+                        className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                        required
+                    />
+                    <input
+                        type="text"
                         placeholder="Marka pojazdu"
                         value={formData.brand}
                         onChange={(e) => setFormData({ ...formData, brand: e.target.value})}
+                        className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                        required
+                    />
+                    <input
+                        type="text"
+                        placeholder="Model pojazdu"
+                        value={formData.model}
+                        onChange={(e) => setFormData({ ...formData, model: e.target.value})}
                         className="border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
                         required
                     />

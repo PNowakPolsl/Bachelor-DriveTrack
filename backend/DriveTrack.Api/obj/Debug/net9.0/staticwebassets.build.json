@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "UJBebVO8d41NpAs/5wWg6md7qL27zbhv2d9IkB5zkCw=",
+  "Source": "DriveTrack.Api",
+  "BasePath": "_content/DriveTrack.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
