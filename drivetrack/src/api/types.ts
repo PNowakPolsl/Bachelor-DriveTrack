@@ -27,3 +27,29 @@ export interface CreateVehicleRequest {
   plate?: string | null;
   year?: number | null;
 }
+
+export type Category = {
+  id: Guid;
+  name: string;
+  ownerUserId?: Guid | null;
+  createdAt: string;
+};
+
+export type Expense = {
+  id: Guid;
+  date: string;
+  amount: number;
+  description?: string | null;
+  odometerKm?: number | null;
+  category: { categoryId: Guid;
+              name: string;
+  };
+};
+
+export type CreateExpenseRequest = {
+  categoryId: Guid;
+  date: string;
+  amount: number;
+  description?: string | null;
+  odometerKm?: number | null;
+};

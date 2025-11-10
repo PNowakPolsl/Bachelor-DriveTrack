@@ -17,9 +17,9 @@ public static class SeedExtensions
         {
             db.FuelTypes.AddRange(
                 new FuelType { Id = Guid.NewGuid(), Name = "Diesel", DefaultUnit = "L" },
-                new FuelType { Id = Guid.NewGuid(), Name = "Petrol", DefaultUnit = "L" },
+                new FuelType { Id = Guid.NewGuid(), Name = "Benzyna", DefaultUnit = "L" },
                 new FuelType { Id = Guid.NewGuid(), Name = "LPG", DefaultUnit = "L" },
-                new FuelType { Id = Guid.NewGuid(), Name = "Electricity", DefaultUnit = "kWh" }
+                new FuelType { Id = Guid.NewGuid(), Name = "Elektryczność", DefaultUnit = "kWh" }
             );
             await db.SaveChangesAsync();
         }
@@ -27,11 +27,11 @@ public static class SeedExtensions
         if (!await db.Categories.AnyAsync())
         {
             db.Categories.AddRange(
-                new Category { Id = Guid.NewGuid(), Name = "Insurance" },
-                new Category { Id = Guid.NewGuid(), Name = "Service" },
-                new Category { Id = Guid.NewGuid(), Name = "Wash" },
-                new Category { Id = Guid.NewGuid(), Name = "Parking" },
-                new Category { Id = Guid.NewGuid(), Name = "Tolls" }
+                new Category { Id = Guid.NewGuid(), Name = "Paliwo" },
+                new Category { Id = Guid.NewGuid(), Name = "Mechanik" },
+                new Category { Id = Guid.NewGuid(), Name = "Przegląd" },
+                new Category { Id = Guid.NewGuid(), Name = "Ubezpieczenie" },
+                new Category { Id = Guid.NewGuid(), Name = "Inne" }
             );
             await db.SaveChangesAsync();
         }

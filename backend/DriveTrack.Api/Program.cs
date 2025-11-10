@@ -274,14 +274,13 @@ app.MapPost("/categories", async (AppDbContext db, CreateCategoryRequest body) =
 });
 
 // Expenses
-app.MapGet("/vehicles/{vehicleId:guid}/expenses", async (AppDbContext db, Guid vehicleId, DateOnly? from, DateOnly? to, Guid? categoryId) =>
+app.MapGet("/vehicles/{vehicleId:guid}/expenses", async (
+    AppDbContext db, Guid vehicleId, DateOnly? from, DateOnly? to, Guid? categoryId) =>
 {
     var exists = await db.Vehicles.AnyAsync(v => v.Id == vehicleId);
     if (!exists) return Results.NotFound("Vehicle not found.");
 
-    var q = db.Expenses
-        .Where(e => e.VehicleId == vehicleId);
-
+    var q = db.Expenses.Where(e => e.VehicleId == vehicleId);
     if (from is not null) q = q.Where(e => e.Date >= from);
     if (to   is not null) q = q.Where(e => e.Date <= to);
     if (categoryId is not null) q = q.Where(e => e.CategoryId == categoryId);
@@ -289,13 +288,18 @@ app.MapGet("/vehicles/{vehicleId:guid}/expenses", async (AppDbContext db, Guid v
     var list = await q
         .OrderByDescending(e => e.Date)
         .Select(e => new {
-            e.Id, e.Date, e.Amount, e.Description, e.OdometerKm,
-            Category = new { e.CategoryId }
+            e.Id,
+            e.Date,
+            e.Amount,
+            e.Description,
+            e.OdometerKm,
+            Category = new { CategoryId = e.CategoryId, Name = e.Category.Name } // ⬅️ TU DODALIŚMY NAZWĘ
         })
         .ToListAsync();
 
     return Results.Ok(list);
 });
+
 
 app.MapPost("/vehicles/{vehicleId:guid}/expenses", async (AppDbContext db, Guid vehicleId, CreateExpenseRequest body) =>
 {
@@ -322,7 +326,18 @@ app.MapPost("/vehicles/{vehicleId:guid}/expenses", async (AppDbContext db, Guid 
     db.Expenses.Add(exp);
     await db.SaveChangesAsync();
 
-    return Results.Created($"/vehicles/{vehicleId}/expenses/{exp.Id}", exp);
+    return Results.Created(
+    $"/vehicles/{vehicleId}/expenses/{exp.Id}",
+        new {
+            exp.Id,
+            exp.Date,
+            exp.Amount,
+            exp.Description,
+            exp.OdometerKm,
+            Category = new { Id = exp.CategoryId, Name = category.Name }
+        }
+    );
+
 });
 
 // Reminders
