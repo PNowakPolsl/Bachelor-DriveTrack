@@ -142,10 +142,15 @@ export default function Expenses() {
                     <tr key={e.id} className="border-t border-gray-300 hover:bg-gray-50 transition">
                       <td className="p-3">{e.date}</td>
                       <td className="p-3">
-                        <span className={`px-2 py-1 rounded-full font-semibold text-sm ${categoryBadge(e.category.name)}`}>
+                        {e.category?.name ? (
+                          <span className={`px-2 py-1 rounded-full font-semibold text-sm ${categoryBadge(e.category.name)}`}>
                             {e.category.name}
-                        </span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">—</span>
+                        )}
                       </td>
+
 
 
                       <td className="p-3">{e.description ?? "—"}</td>

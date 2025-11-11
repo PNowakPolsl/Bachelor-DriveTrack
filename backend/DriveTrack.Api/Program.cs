@@ -156,6 +156,7 @@ app.MapGet("/vehicles/{vehicleId:guid}", async (AppDbContext db, Guid vehicleId)
 });
 
 
+
 app.MapPost("/vehicles/{vehicleId:guid}/fuel-entries", async (AppDbContext db, Guid vehicleId, CreateFuelEntryRequest body) =>
 {
     var vehicle = await db.Vehicles.FindAsync(vehicleId);
@@ -195,10 +196,52 @@ app.MapPost("/vehicles/{vehicleId:guid}/fuel-entries", async (AppDbContext db, G
     db.FuelEntries.Add(entry);
     await db.SaveChangesAsync();
 
-    return Results.Created($"/vehicles/{vehicleId}/fuel-entries/{entry.Id}", new {
+    var fuelCategory = await db.Categories
+        .Where(x => x.OwnerUserId == null && x.Name.ToLower() == "paliwo")
+        .FirstOrDefaultAsync();
+
+    Expense? createdExpense = null;
+
+    if (fuelCategory != null)
+    {
+        createdExpense = new Expense
+        {
+            Id = Guid.NewGuid(),
+            VehicleId = vehicleId,
+            CategoryId = fuelCategory.Id,
+            Date = body.Date,
+            Amount = total,
+            Description = string.IsNullOrWhiteSpace(body.Station)
+                ? $"Tankowanie {fuelType.Name}"
+                : $"Tankowanie {fuelType.Name} — {body.Station}",
+            OdometerKm = body.OdometerKm,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.Expenses.Add(createdExpense);
+        await db.SaveChangesAsync();
+    }
+
+    if (createdExpense != null)
+    {
+        var response = new
+        {
+            createdExpense.Id,
+            createdExpense.Date,
+            createdExpense.Amount,
+            createdExpense.Description,
+            createdExpense.OdometerKm,
+            Category = new { CategoryId = createdExpense.CategoryId, Name = fuelCategory.Name }
+        };
+        return Results.Created($"/vehicles/{vehicleId}/expenses/{createdExpense.Id}", response);
+    }
+
+    return Results.Created($"/vehicles/{vehicleId}/fuel-entries/{entry.Id}", new
+    {
         entry.Id, entry.Date, entry.Volume, entry.Unit, entry.PricePerUnit, entry.TotalCost, entry.OdometerKm, entry.IsFullTank, entry.Station
     });
 });
+
 
 app.MapGet("/vehicles/{vehicleId:guid}/fuel-entries", async (
     AppDbContext db, Guid vehicleId, DateOnly? from, DateOnly? to) =>

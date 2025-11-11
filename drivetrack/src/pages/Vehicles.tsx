@@ -4,7 +4,7 @@ import Topbar from "../components/Topbar";
 import VehicleForm from "../components/VehicleForm";
 import { Fuel, Pencil, Trash2 } from "lucide-react";
 
-import { listVehicles, createVehicle, getVehicle } from "../api/vehicles";
+import { listVehicles, createVehicle, getVehicle, assignFuelType } from "../api/vehicles";
 import type { Vehicle, VehicleDetails } from "../api/types";
 
 export default function Vehicles() {
@@ -14,36 +14,50 @@ export default function Vehicles() {
   const [vehicleToEdit, setVehicleToEdit] = useState<number | null>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await listVehicles();
-        setVehicles(data);
-      } catch (e) {
-        console.error("Błąd listVehicles()", e);
-      }
-    })();
-  }, []);
+  (async () => {
+    try {
+      const base = await listVehicles();
+      const detailed = await Promise.all(
+        base.map(async (v) => {
+          try {
+            const det = await getVehicle(v.id);
+            return det;
+          } catch {
+            return v;
+          }
+        })
+      );
+      setVehicles(detailed);
+    } catch (e) {
+      console.error("Błąd listVehicles()", e);
+    }
+  })();
+}, []);
+
 
   const handleAddVehicle = async (vehicleData: any) => {
-    try {
-      const payload = {
-        name: vehicleData.name.trim(),
-        make: vehicleData.brand.trim(),    // "brand" z formularza => make w API
-        model: vehicleData.model.trim(),
-        plate: vehicleData.registration?.trim() || null,
-        year: vehicleData.year ? Number(vehicleData.year) : null,
-      };
+  try {
+    const payload = {
+      name: vehicleData.name.trim(),
+      make: vehicleData.brand.trim(),
+      model: vehicleData.model.trim(),
+      plate: vehicleData.registration.trim(),
+      year: vehicleData.year ? Number(vehicleData.year) : null,
+    };
 
-      const created = await createVehicle(payload);
-      const details = await getVehicle(created.id); // zawiera fuelTypes
-      setVehicles(prev => [details, ...prev]);
-
-      setIsFormOpen(false);
-      setVehicleToEdit(null);
-    } catch (e: any) {
-      alert(e?.response?.data ?? "Błąd zapisu pojazdu");
+    const created = await createVehicle(payload);
+    const selectedFuelTypeIds: string[] = vehicleData.selectedFuelTypeIds ?? [];
+    for (const ftId of selectedFuelTypeIds) {
+      await assignFuelType(created.id, ftId);
     }
-  };
+    const detailed = await getVehicle(created.id);
+    setVehicles(prev => [detailed, ...prev]);
+    setIsFormOpen(false);
+  } catch (e: any) {
+    alert(e?.response?.data ?? "Błąd zapisu pojazdu");
+  }
+};
+
 
   const handledDeleteVehicle = (index: number) => setVehicleToDelete(index);
   const confirmDelete = () => {
@@ -110,9 +124,9 @@ export default function Vehicles() {
                   <div className="flex items-center gap-2 text-sm font-medium border bg-gray-200 border-gray-300 rounded-full px-3 py-1 text-gray-700">
                     <Fuel className="w-4 h-4 text-gray-700" />
                     <span className="text-gray-700 font-bold text-sm">
-                      {vehicle.fuelTypes?.length
-                        ? vehicle.fuelTypes.map((ft: any) => ft.name).join(" / ")
-                        : "brak"}
+                      {vehicle.fuelTypes && vehicle.fuelTypes.length > 0
+                      ? vehicle.fuelTypes.map((ft: any) => ft.name).join(" / ")
+                      : "Brak"}
                     </span>
                   </div>
                 </div>

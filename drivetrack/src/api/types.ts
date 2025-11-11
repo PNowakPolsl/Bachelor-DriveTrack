@@ -53,3 +53,20 @@ export type CreateExpenseRequest = {
   description?: string | null;
   odometerKm?: number | null;
 };
+
+export interface FuelType {
+  id: Guid;
+  name: string;
+  defaultUnit: string;
+}
+
+export interface CreateFuelEntryRequest {
+  fuelTypeId: Guid;
+  unit?: string | null;
+  date: string;
+  volume: number;
+  pricePerUnit: number;
+  odometerKm: number;
+  isFullTank?: boolean;
+  station?: string | null;
+}
