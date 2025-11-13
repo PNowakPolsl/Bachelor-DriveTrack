@@ -11,20 +11,41 @@ interface VehicleFormPops{
 type FuelTypeDict = { id: string; name: string; defaultUnit: string };
 
 export default function VehicleForm({ onClose, onAddVehicle, initialData }: VehicleFormPops){
-  const [formData, setFormData] = useState(
-    initialData || {
-      name: "",
-      brand: "",
-      model: "",
-      registration: "",
-      year: "",
-      kilometers: "",
+  const [formData, setFormData] = useState(() => {
+  if (initialData) {
+    const v: any = initialData;
+    return {
+      name: v.name ?? "",
+      brand: v.make ?? "",
+      model: v.model ?? "",
+      registration: v.plate ?? "",
+      year: v.year ? String(v.year) : "",
+      kilometers: v.odometerKm != null ? String(v.odometerKm) : "",
       fuelType: "benzyna",
-    }
-  );
+    };
+  }
+  return {
+    name: "",
+    brand: "",
+    model: "",
+    registration: "",
+    year: "",
+    kilometers: "",
+    fuelType: "benzyna",
+  };
+});
+
 
   const [fuelTypes, setFuelTypes] = useState<FuelTypeDict[]>([]);
   const [selectedFuelTypeIds, setSelectedFuelTypeIds] = useState<string[]>([]);
+
+    useEffect(() => {
+    if (initialData && (initialData as any).fuelTypes) {
+      const selected = (initialData as any).fuelTypes.map((ft: any) => ft.id);
+      setSelectedFuelTypeIds(selected);
+    }
+  }, [initialData]);
+
 
   useEffect(() => {
     (async () => {

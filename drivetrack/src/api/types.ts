@@ -26,6 +26,7 @@ export interface CreateVehicleRequest {
   model: string;
   plate?: string | null;
   year?: number | null;
+  baseOdometerKm?: number | null;
 }
 
 export type Category = {

@@ -20,8 +20,9 @@ public class Vehicle
     public string? Plate { get; set; }
     public int? Year { get; set; }
     public string? Vin { get; set; }
-
-
+    public int? InitialOdometerKm { get; set; }
+    public int? BaseOdometerKm { get; set; }
+    
     public Guid? CreatedBy { get; set; }
     public AppUser? CreatedByUser { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

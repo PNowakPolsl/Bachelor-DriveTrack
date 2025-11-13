@@ -70,6 +70,63 @@ app.MapPost("/fuel-types", async (AppDbContext db, FuelType input) =>
     return Results.Created($"/fuel-types/{input.Id}", input);
 });
 
+
+// PRZEBIEG
+app.MapGet("/vehicles/{vehicleId:guid}/odometer", async (AppDbContext db, Guid vehicleId) =>
+{
+    var exists = await db.Vehicles.AnyAsync(v => v.Id == vehicleId);
+    if (!exists) return Results.NotFound("Vehicle not found.");
+
+    var baseOdo = await db.Vehicles
+        .Where(v => v.Id == vehicleId && v.BaseOdometerKm != null)
+        .Select(v => new OdometerCandidate(
+            "base",
+            v.BaseOdometerKm,
+            null
+        ))
+        .FirstOrDefaultAsync();
+
+    var lastFuel = await db.FuelEntries
+        .Where(x => x.VehicleId == vehicleId && x.OdometerKm >= 0)
+        .OrderByDescending(x => x.Date)
+        .ThenByDescending(x => x.OdometerKm)
+        .Select(x => new OdometerCandidate(
+            "fuel",
+            x.OdometerKm,
+            x.Date
+        ))
+        .FirstOrDefaultAsync();
+
+    var lastExp = await db.Expenses
+        .Where(x => x.VehicleId == vehicleId && x.OdometerKm != null)
+        .OrderByDescending(x => x.Date)
+        .ThenByDescending(x => x.OdometerKm)
+        .Select(x => new OdometerCandidate(
+            "expense",
+            x.OdometerKm,
+            x.Date
+        ))
+        .FirstOrDefaultAsync();
+
+    var candidates = new[] { baseOdo, lastFuel, lastExp }
+        .Where(c => c is not null && c.OdometerKm is not null)
+        .Cast<OdometerCandidate>()
+        .ToList();
+
+    if (!candidates.Any())
+        return Results.Ok(new { odometerKm = (int?)null, source = (string?)null, date = (DateOnly?)null });
+
+    var best = candidates
+        .OrderByDescending(c => c.OdometerKm)
+        .ThenByDescending(c => c.Date)
+        .First();
+
+    return Results.Ok(new { odometerKm = best.OdometerKm, source = best.Source, date = best.Date });
+});
+
+
+
+
 // Vehicles
 app.MapGet("/vehicles", async (AppDbContext db) =>
     await db.Vehicles
@@ -80,12 +137,15 @@ app.MapGet("/vehicles", async (AppDbContext db) =>
 
 app.MapPost("/vehicles", async (AppDbContext db, Vehicle input) =>
 {
-    if (string.IsNullOrWhiteSpace(input.Name))  
+    if (string.IsNullOrWhiteSpace(input.Name))
         return Results.BadRequest("Name is required.");
-    if (string.IsNullOrWhiteSpace(input.Make))  
+    if (string.IsNullOrWhiteSpace(input.Make))
         return Results.BadRequest("Make is required.");
-    if (string.IsNullOrWhiteSpace(input.Model)) 
+    if (string.IsNullOrWhiteSpace(input.Model))
         return Results.BadRequest("Model is required.");
+
+    if (input.BaseOdometerKm is not null && input.BaseOdometerKm < 0)
+        return Results.BadRequest("BaseOdometerKm must be >= 0.");
 
     input.Id = Guid.NewGuid();
     input.CreatedAt = DateTime.UtcNow;
@@ -93,6 +153,110 @@ app.MapPost("/vehicles", async (AppDbContext db, Vehicle input) =>
     await db.SaveChangesAsync();
     return Results.Created($"/vehicles/{input.Id}", input);
 });
+
+
+app.MapDelete("/vehicles/{vehicleId:guid}", async (AppDbContext db, Guid vehicleId) =>
+{
+    var vehicle = await db.Vehicles.FirstOrDefaultAsync(v => v.Id == vehicleId);
+    if (vehicle is null)
+        return Results.NotFound("Vehicle not found.");
+
+    var fuelEntries = db.FuelEntries.Where(x => x.VehicleId == vehicleId);
+    var expenses = db.Expenses.Where(x => x.VehicleId == vehicleId);
+    var reminders = db.Reminders.Where(x => x.VehicleId == vehicleId);
+    var vehicleFuelTypes = db.VehicleFuelTypes.Where(x => x.VehicleId == vehicleId);
+    var userVehicles = db.UserVehicles.Where(x => x.VehicleId == vehicleId);
+
+    // usuwamy w odpowiedniej kolejności (najpierw dzieci)
+    db.FuelEntries.RemoveRange(fuelEntries);
+    db.Expenses.RemoveRange(expenses);
+    db.Reminders.RemoveRange(reminders);
+    db.VehicleFuelTypes.RemoveRange(vehicleFuelTypes);
+    db.UserVehicles.RemoveRange(userVehicles);
+    db.Vehicles.Remove(vehicle);
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+app.MapPut("/vehicles/{vehicleId:guid}", async (AppDbContext db, Guid vehicleId, Vehicle input) =>
+{
+    var v = await db.Vehicles.FirstOrDefaultAsync(x => x.Id == vehicleId);
+    if (v is null) return Results.NotFound("Vehicle not found.");
+
+    if (string.IsNullOrWhiteSpace(input.Name))
+        return Results.BadRequest("Name is required.");
+    if (string.IsNullOrWhiteSpace(input.Make))
+        return Results.BadRequest("Make is required.");
+    if (string.IsNullOrWhiteSpace(input.Model))
+        return Results.BadRequest("Model is required.");
+
+    v.Name  = input.Name.Trim();
+    v.Make  = input.Make.Trim();
+    v.Model = input.Model.Trim();
+    v.Plate = string.IsNullOrWhiteSpace(input.Plate) ? null : input.Plate.Trim();
+    v.Year  = input.Year;
+
+    if (input.BaseOdometerKm is not null && input.BaseOdometerKm < 0)
+        return Results.BadRequest("BaseOdometerKm must be >= 0.");
+
+    v.BaseOdometerKm = input.BaseOdometerKm;
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+
+// pomocnicza funkcja do obliczania aktualnego przebiegu
+static async Task<int?> GetCurrentOdometer(AppDbContext db, Guid vehicleId)
+{
+    var baseOdo = await db.Vehicles
+        .Where(v => v.Id == vehicleId && v.BaseOdometerKm != null)
+        .Select(v => new OdometerCandidate(
+            "base",
+            v.BaseOdometerKm,
+            null
+        ))
+        .FirstOrDefaultAsync();
+
+    var lastFuel = await db.FuelEntries
+        .Where(x => x.VehicleId == vehicleId && x.OdometerKm >= 0)
+        .OrderByDescending(x => x.Date)
+        .ThenByDescending(x => x.OdometerKm)
+        .Select(x => new OdometerCandidate(
+            "fuel",
+            x.OdometerKm,
+            x.Date
+        ))
+        .FirstOrDefaultAsync();
+
+    var lastExp = await db.Expenses
+        .Where(x => x.VehicleId == vehicleId && x.OdometerKm != null)
+        .OrderByDescending(x => x.Date)
+        .ThenByDescending(x => x.OdometerKm)
+        .Select(x => new OdometerCandidate(
+            "expense",
+            x.OdometerKm,
+            x.Date
+        ))
+        .FirstOrDefaultAsync();
+
+    var candidates = new[] { baseOdo, lastFuel, lastExp }
+        .Where(c => c is not null && c!.OdometerKm is not null)
+        .Cast<OdometerCandidate>()
+        .ToList();
+
+    if (!candidates.Any())
+        return null;
+
+    var best = candidates
+        .OrderByDescending(c => c.OdometerKm)
+        .ThenByDescending(c => c.Date)
+        .First();
+
+    return best.OdometerKm;
+}
+
+
 
 // Vehicle <-> FuelTypes
 
@@ -175,6 +339,16 @@ app.MapPost("/vehicles/{vehicleId:guid}/fuel-entries", async (AppDbContext db, G
     if (body.PricePerUnit < 0) return Results.BadRequest("PricePerUnit must be >= 0.");
     if (body.OdometerKm < 0) return Results.BadRequest("OdometerKm must be >= 0.");
 
+    var currentOdo = await GetCurrentOdometer(db, vehicleId);
+    if (currentOdo is not null && body.OdometerKm < currentOdo.Value)
+    {
+        return Results.BadRequest(
+            $"OdometerKm must be >= current value ({currentOdo.Value} km). " +
+            "Jeśli chcesz obniżyć przebieg, zrób to w edycji pojazdu."
+        );
+    }
+
+
     var total = Math.Round(body.Volume * body.PricePerUnit, 2, MidpointRounding.AwayFromZero);
 
     var entry = new FuelEntry
@@ -197,48 +371,51 @@ app.MapPost("/vehicles/{vehicleId:guid}/fuel-entries", async (AppDbContext db, G
     await db.SaveChangesAsync();
 
     var fuelCategory = await db.Categories
-        .Where(x => x.OwnerUserId == null && x.Name.ToLower() == "paliwo")
-        .FirstOrDefaultAsync();
+    .Where(x => x.OwnerUserId == null && x.Name.ToLower() == "paliwo")
+    .FirstOrDefaultAsync();
 
-    Expense? createdExpense = null;
-
-    if (fuelCategory != null)
+    // Jeśli brak kategorii "Paliwo" → zwróć sam wpis paliwowy (bez tworzenia Expense)
+    if (fuelCategory is null)
     {
-        createdExpense = new Expense
+        return Results.Created($"/vehicles/{vehicleId}/fuel-entries/{entry.Id}", new
         {
-            Id = Guid.NewGuid(),
-            VehicleId = vehicleId,
-            CategoryId = fuelCategory.Id,
-            Date = body.Date,
-            Amount = total,
-            Description = string.IsNullOrWhiteSpace(body.Station)
-                ? $"Tankowanie {fuelType.Name}"
-                : $"Tankowanie {fuelType.Name} — {body.Station}",
-            OdometerKm = body.OdometerKm,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        db.Expenses.Add(createdExpense);
-        await db.SaveChangesAsync();
+            entry.Id,
+            entry.Date,
+            entry.Volume,
+            entry.Unit,
+            entry.PricePerUnit,
+            entry.TotalCost,
+            entry.OdometerKm,
+            entry.IsFullTank,
+            entry.Station
+        });
     }
 
-    if (createdExpense != null)
+    var createdExpense = new Expense
     {
-        var response = new
-        {
-            createdExpense.Id,
-            createdExpense.Date,
-            createdExpense.Amount,
-            createdExpense.Description,
-            createdExpense.OdometerKm,
-            Category = new { CategoryId = createdExpense.CategoryId, Name = fuelCategory.Name }
-        };
-        return Results.Created($"/vehicles/{vehicleId}/expenses/{createdExpense.Id}", response);
-    }
+        Id = Guid.NewGuid(),
+        VehicleId = vehicleId,
+        CategoryId = fuelCategory.Id,
+        Date = body.Date,
+        Amount = total,
+        Description = string.IsNullOrWhiteSpace(body.Station)
+            ? $"Tankowanie {fuelType.Name}"
+            : $"Tankowanie {fuelType.Name} — {body.Station}",
+        OdometerKm = body.OdometerKm,
+        CreatedAt = DateTime.UtcNow
+    };
 
-    return Results.Created($"/vehicles/{vehicleId}/fuel-entries/{entry.Id}", new
+    db.Expenses.Add(createdExpense);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/vehicles/{vehicleId}/expenses/{createdExpense.Id}", new
     {
-        entry.Id, entry.Date, entry.Volume, entry.Unit, entry.PricePerUnit, entry.TotalCost, entry.OdometerKm, entry.IsFullTank, entry.Station
+        createdExpense.Id,
+        createdExpense.Date,
+        createdExpense.Amount,
+        createdExpense.Description,
+        createdExpense.OdometerKm,
+        Category = new { CategoryId = createdExpense.CategoryId, Name = fuelCategory.Name }
     });
 });
 
@@ -353,6 +530,19 @@ app.MapPost("/vehicles/{vehicleId:guid}/expenses", async (AppDbContext db, Guid 
     if (category is null) return Results.BadRequest("Category not found.");
 
     if (body.Amount <= 0) return Results.BadRequest("Amount must be > 0.");
+
+    if (body.OdometerKm is not null)
+    {
+        var currentOdo = await GetCurrentOdometer(db, vehicleId);
+        if (currentOdo is not null && body.OdometerKm < currentOdo.Value)
+        {
+            return Results.BadRequest(
+                $"OdometerKm must be >= current value ({currentOdo.Value} km). " +
+                "Jeśli chcesz obniżyć przebieg, zrób to w edycji pojazdu."
+            );
+        }
+    }
+
 
     var exp = new Expense
     {
@@ -569,6 +759,9 @@ app.MapDelete("/vehicles/{vehicleId:guid}/users/{userId:guid}", async (AppDbCont
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
+
+
+
 
 
 await app.SeedAsync();
