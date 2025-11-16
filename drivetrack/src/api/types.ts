@@ -7,6 +7,7 @@ export interface Vehicle {
   model: string;
   plate?: string | null;
   year?: number | null;
+  vin?: string | null;
   createdAt?: string;
 }
 
@@ -26,6 +27,7 @@ export interface CreateVehicleRequest {
   model: string;
   plate?: string | null;
   year?: number | null;
+  vin?: string | null;
   baseOdometerKm?: number | null;
 }
 
@@ -71,3 +73,27 @@ export interface CreateFuelEntryRequest {
   isFullTank?: boolean;
   station?: string | null;
 }
+
+export type Reminder = {
+  id: Guid;
+  vehicleId: Guid;
+  title: string;
+  description?: string | null;
+  dueDate: string;       // "YYYY-MM-DD"
+  isCompleted: boolean;
+  completedAt?: string | null;
+  createdAt: string;
+};
+
+export type CreateReminderRequest = {
+  title: string;
+  description?: string | null;
+  dueDate: string;
+};
+
+export type UpdateReminderRequest = {
+  title?: string | null;
+  description?: string | null;
+  dueDate?: string | null;
+  isCompleted?: boolean | null;
+};

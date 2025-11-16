@@ -65,10 +65,12 @@ export default function Vehicles() {
       model: vehicleData.model.trim(),
       plate: vehicleData.registration.trim(),
       year: vehicleData.year ? Number(vehicleData.year) : null,
+      vin: vehicleData.vin ? vehicleData.vin.trim() : null,
       baseOdometerKm: vehicleData.kilometers
         ? Number(vehicleData.kilometers)
         : null,
 };
+
 
 
     const created = await createVehicle(payload);
@@ -134,10 +136,12 @@ export default function Vehicles() {
       model: vehicleData.model.trim(),
       plate: vehicleData.registration.trim(),
       year: vehicleData.year ? Number(vehicleData.year) : null,
+      vin: vehicleData.vin ? vehicleData.vin.trim() : null,
       baseOdometerKm: vehicleData.kilometers
         ? Number(vehicleData.kilometers)
         : null,
     };
+
 
 
         try {
@@ -156,7 +160,6 @@ export default function Vehicles() {
         await unassignFuelType(id, ftId);
       }
 
-      // ⬇ pobieramy świeże dane pojazdu + świeży przebieg
       const [fresh, odo] = await Promise.all([
         getVehicle(id),
         getVehicleOdometer(id),
@@ -235,10 +238,16 @@ export default function Vehicles() {
                   </div>
                 </div>
 
-                <div className="mt-4 border-t border-gray-100 pt-4">
+                <div className="mt-4 border-t border-gray-100 pt-4 space-y-1">
                   <div className="flex justify-between text-gray-800 font-bold">
                     <span className="font-medium text-gray-500">Numer rejestracyjny</span>
                     <span className="uppercase">{vehicle.plate ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-800 font-bold">
+                    <span className="font-medium text-gray-500">VIN</span>
+                    <span className="font-medium text-gray-800">
+                      {vehicle.vin ?? "—"}
+                    </span>
                   </div>
                   <div className="flex justify-between text-gray-800 font-bold">
                     <span className="font-medium text-gray-500">Przebieg</span>
@@ -247,6 +256,7 @@ export default function Vehicles() {
                     </span>
                   </div>
                 </div>
+
 
                 <div className="flex mt-4 gap-2">
                   <button

@@ -47,7 +47,6 @@ export default function ExpensesForm({
     return c ? c.name.toLowerCase() === "paliwo" : false;
   }, [form.categoryId, categories]);
 
-  // pobieramy ostatni przebieg
   useEffect(() => {
     (async () => {
       const odo = await getVehicleOdometer(activeVehicleId);
@@ -55,7 +54,6 @@ export default function ExpensesForm({
     })();
   }, [activeVehicleId]);
 
-  // fuelTypes pojazdu
   useEffect(() => {
     if (!isFuel) return;
 
@@ -75,7 +73,6 @@ export default function ExpensesForm({
     if (ft) setUnit(ft.defaultUnit);
   }, [fuelTypeId, fuelTypes]);
 
-  // walidacja przebiegu
   const validateOdometer = (raw: string) => {
     const num = raw ? Number(raw) : null;
 
@@ -90,7 +87,9 @@ export default function ExpensesForm({
     }
 
     if (lastOdometer !== null && num < lastOdometer) {
-      setOdometerError(`Przebieg nie może być mniejszy niż ${lastOdometer} km`);
+      setOdometerError(
+        `Przebieg nie może być mniejszy niż ${lastOdometer} km`
+      );
       return false;
     }
 
@@ -101,7 +100,6 @@ export default function ExpensesForm({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // walidacja przebiegu
     if (!validateOdometer(form.odometerKm)) {
       return;
     }
@@ -110,7 +108,6 @@ export default function ExpensesForm({
 
     try {
       if (!isFuel) {
-        /// ZWYKŁY WYDATEK
         const payload: CreateExpenseRequest = {
           date: form.date,
           categoryId: form.categoryId as Guid,
@@ -125,7 +122,6 @@ export default function ExpensesForm({
         return;
       }
 
-      /// TANKOWANIE
       const created = await createFuelEntry(activeVehicleId, {
         fuelTypeId,
         date: form.date,
@@ -264,19 +260,28 @@ export default function ExpensesForm({
                 className="border rounded-lg p-3"
               />
 
-              {/* ODOMETER */}
+              {/* przebieg + stacja */}
               <div>
-                <input
-                  type="number"
-                  required
-                  placeholder="Przebieg (km)"
-                  value={form.odometerKm}
-                  onChange={(e) => {
-                    setForm({ ...form, odometerKm: e.target.value });
-                    validateOdometer(e.target.value);
-                  }}
-                  className="border rounded-lg p-3 w-full"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="number"
+                    required
+                    placeholder="Przebieg (km)"
+                    value={form.odometerKm}
+                    onChange={(e) => {
+                      setForm({ ...form, odometerKm: e.target.value });
+                      validateOdometer(e.target.value);
+                    }}
+                    className="border rounded-lg p-3 w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Stacja"
+                    value={station}
+                    onChange={(e) => setStation(e.target.value)}
+                    className="border rounded-lg p-3 w-full"
+                  />
+                </div>
                 {odometerError && (
                   <p className="text-red-600 text-sm mt-1">
                     {odometerError}
@@ -284,13 +289,16 @@ export default function ExpensesForm({
                 )}
               </div>
 
-              <input
-                type="text"
-                placeholder="Stacja"
-                value={station}
-                onChange={(e) => setStation(e.target.value)}
-                className="border rounded-lg p-3"
-              />
+              {/* PEŁNY BAK */}
+              <label className="inline-flex items-center gap-2 mt-1">
+                <input
+                  type="checkbox"
+                  checked={isFullTank}
+                  onChange={(e) => setIsFullTank(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <span>Pełny bak</span>
+              </label>
             </>
           )}
 

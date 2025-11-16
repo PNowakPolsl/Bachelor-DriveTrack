@@ -150,9 +150,6 @@ export default function Expenses() {
                           <span className="text-gray-500">—</span>
                         )}
                       </td>
-
-
-
                       <td className="p-3">{e.description ?? "—"}</td>
                       <td className="p-3 text-right font-semibold">{e.amount.toFixed(2)} zł</td>
                       <td className="p-3 text-right">{e.odometerKm ?? "—"}</td>

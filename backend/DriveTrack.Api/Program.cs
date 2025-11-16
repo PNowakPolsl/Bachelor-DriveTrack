@@ -32,6 +32,20 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+static (DateOnly From, DateOnly To) GetSixMonthsRange(DateOnly? from, DateOnly? to)
+{
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var end = to ?? today;
+
+    var startMonth = end.AddMonths(-5);
+    var start = new DateOnly(startMonth.Year, startMonth.Month, 1);
+
+    if (from is not null && from > start) start = from.Value;
+
+    return (start, end);
+}
+
+
 app.MapGet("/", () => "DriveTrack API is running");
 
 app.MapGet("/db-health", async (AppDbContext db) =>
@@ -131,9 +145,10 @@ app.MapGet("/vehicles/{vehicleId:guid}/odometer", async (AppDbContext db, Guid v
 app.MapGet("/vehicles", async (AppDbContext db) =>
     await db.Vehicles
         .OrderBy(v => v.Make)
-        .Select(v => new { v.Id, v.Name, v.Make, v.Model, v.Plate, v.Year })
+        .Select(v => new { v.Id, v.Name, v.Make, v.Model, v.Plate, v.Year, v.Vin })
         .ToListAsync()
 );
+
 
 app.MapPost("/vehicles", async (AppDbContext db, Vehicle input) =>
 {
@@ -196,6 +211,10 @@ app.MapPut("/vehicles/{vehicleId:guid}", async (AppDbContext db, Guid vehicleId,
     v.Plate = string.IsNullOrWhiteSpace(input.Plate) ? null : input.Plate.Trim();
     v.Year  = input.Year;
 
+    v.Vin = string.IsNullOrWhiteSpace(input.Vin)
+        ? null
+        : input.Vin.Trim();
+
     if (input.BaseOdometerKm is not null && input.BaseOdometerKm < 0)
         return Results.BadRequest("BaseOdometerKm must be >= 0.");
 
@@ -204,6 +223,7 @@ app.MapPut("/vehicles/{vehicleId:guid}", async (AppDbContext db, Guid vehicleId,
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
+
 
 
 // pomocnicza funkcja do obliczania aktualnego przebiegu
@@ -307,6 +327,7 @@ app.MapGet("/vehicles/{vehicleId:guid}", async (AppDbContext db, Guid vehicleId)
             v.Model,
             v.Plate,
             v.Year,
+            v.Vin,
             FuelTypes = db.VehicleFuelTypes
                 .Where(x => x.VehicleId == v.Id)
                 .Join(db.FuelTypes, link => link.FuelTypeId, ft => ft.Id,
@@ -318,7 +339,6 @@ app.MapGet("/vehicles/{vehicleId:guid}", async (AppDbContext db, Guid vehicleId)
 
     return vehicle is null ? Results.NotFound() : Results.Ok(vehicle);
 });
-
 
 
 app.MapPost("/vehicles/{vehicleId:guid}/fuel-entries", async (AppDbContext db, Guid vehicleId, CreateFuelEntryRequest body) =>
@@ -492,6 +512,157 @@ app.MapPost("/categories", async (AppDbContext db, CreateCategoryRequest body) =
     await db.SaveChangesAsync();
     return Results.Created($"/categories/{cat.Id}", cat);
 });
+
+app.MapGet("/reports/monthly-expenses", async (
+    AppDbContext db,
+    DateOnly? from,
+    DateOnly? to
+) =>
+{
+    var (start, end) = GetSixMonthsRange(from, to);
+
+    // najpierw pobieramy „płaskie” dane z bazy
+    var raw = await db.Expenses
+        .Where(e => e.Date >= start && e.Date <= end)
+        .Select(e => new { e.Date, e.Amount })
+        .ToListAsync();
+
+    // grupowanie i sumy już w pamięci
+    var list = raw
+        .GroupBy(e => new { e.Date.Year, e.Date.Month })
+        .Select(g => new MonthlyExpenseReportItem(
+            g.Key.Year,
+            g.Key.Month,
+            g.Sum(x => x.Amount)
+        ))
+        .OrderBy(x => x.Year)
+        .ThenBy(x => x.Month)
+        .ToList();
+
+    return Results.Ok(list);
+});
+
+
+app.MapGet("/reports/expenses-by-category", async (
+    AppDbContext db,
+    DateOnly? from,
+    DateOnly? to
+) =>
+{
+    var (start, end) = GetSixMonthsRange(from, to);
+
+    // pobieramy tylko to, co potrzebne
+    var raw = await db.Expenses
+        .Where(e => e.Date >= start && e.Date <= end)
+        .Select(e => new
+        {
+            Amount = e.Amount,
+            CategoryName = e.Category != null
+                ? e.Category.Name
+                : "Brak kategorii"
+        })
+        .ToListAsync();
+
+    var list = raw
+        .GroupBy(x => x.CategoryName)
+        .Select(g => new CategoryExpenseReportItem(
+            g.Key,
+            g.Sum(x => x.Amount)
+        ))
+        .OrderByDescending(x => x.Total)
+        .ToList();
+
+    return Results.Ok(list);
+});
+
+
+app.MapGet("/reports/fuel-consumption", async (
+    AppDbContext db,
+    DateOnly? from,
+    DateOnly? to
+) =>
+{
+    var (start, end) = GetSixMonthsRange(from, to);
+
+    // Bierzemy tylko tankowania:
+    // - pełny bak
+    // - jednostka "L"
+    // - z sensownym przebiegiem
+    var entries = await db.FuelEntries
+        .Where(x =>
+            x.IsFullTank == true &&
+            x.OdometerKm >= 0 &&
+            x.Unit != null &&
+            x.Unit.ToLower() == "l"
+        )
+        .OrderBy(x => x.VehicleId)
+        .ThenBy(x => x.Date)
+        .ThenBy(x => x.OdometerKm)
+        .ToListAsync();
+
+    var buckets = new Dictionary<(int Year, int Month), (double Volume, double Distance)>();
+
+    foreach (var vehicleGroup in entries.GroupBy(e => e.VehicleId))
+    {
+        FuelEntry? prev = null;
+
+        foreach (var current in vehicleGroup)
+        {
+            if (prev is null)
+            {
+                prev = current;
+                continue;
+            }
+
+            var distance = current.OdometerKm - prev.OdometerKm;
+
+            if (distance <= 0)
+            {
+                prev = current;
+                continue;
+            }
+
+            var endDate = current.Date;
+
+            if (endDate < start || endDate > end)
+            {
+                prev = current;
+                continue;
+            }
+
+            var key = (endDate.Year, endDate.Month);
+            if (!buckets.TryGetValue(key, out var agg))
+                agg = (0, 0);
+
+            agg.Volume += (double)current.Volume;
+            agg.Distance += (double)distance;
+
+            buckets[key] = agg;
+
+            prev = current;
+        }
+    }
+
+    var result = buckets
+        .Select(kv =>
+        {
+            var (year, month) = kv.Key;
+            var (volume, distance) = kv.Value;
+            var avg = distance > 0 ? (volume * 100.0) / distance : 0.0;
+
+            return new FuelConsumptionReportItem(
+                year,
+                month,
+                avg
+            );
+        })
+        .OrderBy(x => x.Year)
+        .ThenBy(x => x.Month)
+        .ToList();
+
+    return Results.Ok(result);
+});
+
 
 // Expenses
 app.MapGet("/vehicles/{vehicleId:guid}/expenses", async (
