@@ -11,7 +11,7 @@ type Props = {
   data: { name: string; value: number }[];
 };
 
-const COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ffd700"];
+const COLORS = ["#3be3f6", "#8b5cf6", "#f59e0b", "#10b981", "#ffd700"];
 
 export default function ExpensesCategoryChart({ data }: Props) {
   return (

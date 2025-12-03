@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import VehicleForm from "../components/VehicleForm";
-import { Fuel, Pencil, Trash2 } from "lucide-react";
+import { Fuel, Pencil, Trash2, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";  
 
 import {
   listVehicles,
@@ -22,6 +23,12 @@ export default function Vehicles() {
   const [vehicles, setVehicles] = useState<(Vehicle | VehicleDetails | any)[]>([]);
   const [vehicleToDelete, setVehicleToDelete] = useState<number | null>(null);
   const [vehicleToEdit, setVehicleToEdit] = useState<number | null>(null);
+
+  const navigate = useNavigate();
+
+  const handleShareVehicle = (vehicleId: string) => {
+    navigate(`/vehicles/${vehicleId}/users`);
+  };
 
   useEffect(() => {
     (async () => {
@@ -179,6 +186,7 @@ export default function Vehicles() {
     }
   };
 
+  
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -266,6 +274,14 @@ export default function Vehicles() {
                     <Pencil className="w-4 h-4" />
                     Edytuj
                   </button>
+
+                  <button
+                    onClick={() => handleShareVehicle(vehicle.id)}
+                    className="flex items-center justify-center bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-500 transition"
+                  >
+                    <Users className="w-4 h-4" />
+                  </button>
+
                   <button
                     onClick={() => handledDeleteVehicle(index)}
                     className="flex items-center justify-center bg-red-600 text-white p-2 rounded-lg hover:bg-red-500 transition"
@@ -273,6 +289,7 @@ export default function Vehicles() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+
               </div>
             ))}
           </div>

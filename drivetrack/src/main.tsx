@@ -11,6 +11,7 @@ import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Reminders from './pages/Reminders';
 import Profile from './pages/Profile';
+import VehicleUsersPage from './pages/VehicleUsersPage';
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -25,6 +26,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="/reports" element={<Reports />} />
         <Route path="/reminders" element={<Reminders />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/vehicles/:id/users" element={<VehicleUsersPage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

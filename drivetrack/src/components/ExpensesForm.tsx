@@ -8,8 +8,9 @@ import type {
   FuelType,
 } from "../api/types";
 import { createExpense } from "../api/expenses";
-import { createFuelEntry } from "../api/fuel";
+import { createFuelEntry, listStations } from "../api/fuel";
 import { getVehicle, getVehicleOdometer } from "../api/vehicles";
+
 
 export default function ExpensesForm({
   onClose,
@@ -42,10 +43,15 @@ export default function ExpensesForm({
   const [station, setStation] = useState("");
   const [isFullTank, setIsFullTank] = useState(true);
 
+  // 🔔 Czy pokazywać okienko z potwierdzeniem przyszłej daty
+  const [showFutureConfirm, setShowFutureConfirm] = useState(false);
+
   const isFuel = useMemo(() => {
     const c = categories.find((x) => x.id === form.categoryId);
     return c ? c.name.toLowerCase() === "paliwo" : false;
   }, [form.categoryId, categories]);
+
+  const [knownStations, setKnownStations] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -55,18 +61,28 @@ export default function ExpensesForm({
   }, [activeVehicleId]);
 
   useEffect(() => {
-    if (!isFuel) return;
+  if (!isFuel) return;
 
-    (async () => {
-      const vehicle = await getVehicle(activeVehicleId);
-      setFuelTypes(vehicle.fuelTypes);
+  (async () => {
+    // 1) paliwa
+    const vehicle = await getVehicle(activeVehicleId);
+    setFuelTypes(vehicle.fuelTypes);
 
-      if (vehicle.fuelTypes.length === 1) {
-        setFuelTypeId(vehicle.fuelTypes[0].id);
-        setUnit(vehicle.fuelTypes[0].defaultUnit);
-      }
-    })();
-  }, [isFuel, activeVehicleId]);
+    if (vehicle.fuelTypes.length === 1) {
+      setFuelTypeId(vehicle.fuelTypes[0].id);
+      setUnit(vehicle.fuelTypes[0].defaultUnit);
+    }
+
+    // 2) STACJE dla tego pojazdu
+    try {
+      const stations = await listStations(activeVehicleId);
+      setKnownStations(stations);
+    } catch (e) {
+      console.error("Nie udało się pobrać stacji", e);
+    }
+  })();
+}, [isFuel, activeVehicleId]);
+
 
   useEffect(() => {
     const ft = fuelTypes.find((f) => f.id === fuelTypeId);
@@ -97,9 +113,20 @@ export default function ExpensesForm({
     return true;
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 🔍 Sprawdzenie, czy data jest w przyszłości ( > dzisiaj )
+  const isDateInFuture = () => {
+    if (!form.date) return false;
 
+    // form.date to "YYYY-MM-DD"
+    const selected = new Date(form.date + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return selected.getTime() > today.getTime();
+  };
+
+  // 🧠 właściwy zapis (to co wcześniej było w środku submit)
+  const performSubmit = async () => {
     if (!validateOdometer(form.odometerKm)) {
       return;
     }
@@ -129,9 +156,10 @@ export default function ExpensesForm({
         unit,
         pricePerUnit: Number(pricePerUnit) || 0,
         odometerKm: odometerNum!,
-        station: station || null,
+        station: station.trim(),
         isFullTank,
       });
+
 
       onCreated(created as Expense);
       onClose();
@@ -139,6 +167,19 @@ export default function ExpensesForm({
       console.error(e);
       alert(e?.response?.data ?? "Błąd zapisu wydatku");
     }
+  };
+
+  // 🔘 obsługa kliknięcia Zapisz
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // jeśli data w przyszłości → pokaż popup i dopiero TAM zdecydujemy
+    if (isDateInFuture()) {
+      setShowFutureConfirm(true);
+      return;
+    }
+
+    await performSubmit();
   };
 
   return (
@@ -275,12 +316,21 @@ export default function ExpensesForm({
                     className="border rounded-lg p-3 w-full"
                   />
                   <input
+                    list="stationSuggestions"
                     type="text"
+                    required
                     placeholder="Stacja"
                     value={station}
                     onChange={(e) => setStation(e.target.value)}
                     className="border rounded-lg p-3 w-full"
                   />
+
+                  <datalist id="stationSuggestions">
+                    {knownStations.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+
                 </div>
                 {odometerError && (
                   <p className="text-red-600 text-sm mt-1">
@@ -310,6 +360,37 @@ export default function ExpensesForm({
           </button>
         </form>
       </div>
+
+      {/* 🔔 MODAL POTWIERDZENIA PRZYSZŁEJ DATY */}
+      {showFutureConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-60">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Data w przyszłości
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Czy na pewno chcesz dodać wydatek na przyszłość?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => setShowFutureConfirm(false)}
+                className="px-5 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition"
+              >
+                Nie
+              </button>
+              <button
+                onClick={async () => {
+                  setShowFutureConfirm(false);
+                  await performSubmit();
+                }}
+                className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition"
+              >
+                Tak
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

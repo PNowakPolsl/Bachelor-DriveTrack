@@ -135,6 +135,7 @@ export default function Expenses() {
                     <th className="text-left p-3">Opis</th>
                     <th className="text-right p-3">Kwota</th>
                     <th className="text-right p-3">Przebieg</th>
+                    <th className="text-left p-3">Dodane przez</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -153,11 +154,14 @@ export default function Expenses() {
                       <td className="p-3">{e.description ?? "—"}</td>
                       <td className="p-3 text-right font-semibold">{e.amount.toFixed(2)} zł</td>
                       <td className="p-3 text-right">{e.odometerKm ?? "—"}</td>
+                      <td className="p-3">
+                        {e.createdByName ?? "-"}
+                      </td>
                     </tr>
                   ))}
                   {expenses.length === 0 && (
                     <tr>
-                      <td className="p-4 text-gray-500" colSpan={5}>
+                      <td className="p-4 text-gray-500" colSpan={6}>
                         Brak wydatków dla tego pojazdu.
                       </td>
                     </tr>

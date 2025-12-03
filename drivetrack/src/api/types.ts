@@ -47,6 +47,7 @@ export type Expense = {
   category: { categoryId: Guid;
               name: string;
   };
+  createdByName?: string;
 };
 
 export type CreateExpenseRequest = {
@@ -83,6 +84,7 @@ export type Reminder = {
   isCompleted: boolean;
   completedAt?: string | null;
   createdAt: string;
+  createdByName?: string;
 };
 
 export type CreateReminderRequest = {

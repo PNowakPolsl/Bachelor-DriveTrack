@@ -8,3 +8,8 @@ export async function createFuelEntry(
   const { data } = await http.post(`/vehicles/${vehicleId}/fuel-entries`, input);
   return data;
 }
+
+export async function listStations(vehicleId: Guid): Promise<string[]> {
+  const { data } = await http.get<string[]>(`/vehicles/${vehicleId}/stations`);
+  return data;
+}

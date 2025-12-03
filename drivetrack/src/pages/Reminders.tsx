@@ -182,6 +182,11 @@ export default function Reminders() {
                 <p className="text-gray-700 mb-4">
                   {reminder.description ?? "—"}
                 </p>
+                <p className="text-xs text-gray-500 mb-2">
+                  Dodane przez: <span className="font-semibold">
+                    {reminder.createdByName ?? "—"}
+                  </span>
+                </p>
                 <div className="flex items-center gap-2 text-gray-500 text-base mt-2">
                   <CalendarDays className="w-4 h-4 text-blue-500" />
                   <span>{reminder.dueDate}</span>

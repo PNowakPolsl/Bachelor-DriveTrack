@@ -54,3 +54,33 @@ export async function unassignFuelType(vehicleId: Guid, fuelTypeId: Guid): Promi
   await http.delete(`/vehicles/${vehicleId}/fuel-types/${fuelTypeId}`);
 }
 
+export type VehicleUser = {
+  id: Guid;
+  email: string;
+  name: string;
+  role: "Owner" | "Driver" | "Viewer";
+};
+
+export type AddVehicleUserRequest = {
+  email: string;
+  role: "Owner" | "Driver" | "Viewer";
+};
+
+export async function listVehicleUsers(vehicleId: Guid): Promise<VehicleUser[]> {
+  const { data } = await http.get<VehicleUser[]>(`/vehicles/${vehicleId}/users`);
+  return data;
+}
+
+export async function addVehicleUser(
+  vehicleId: Guid,
+  body: AddVehicleUserRequest
+): Promise<void> {
+  await http.post(`/vehicles/${vehicleId}/users`, body);
+}
+
+export async function removeVehicleUser(
+  vehicleId: Guid,
+  userId: Guid
+): Promise<void> {
+  await http.delete(`/vehicles/${vehicleId}/users/${userId}`);
+}

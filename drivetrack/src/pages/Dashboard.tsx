@@ -1,7 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import { Wallet, Fuel, Car } from "lucide-react";
-import MonthlyExpensesChart from "../components/MonthlyExpensesChart";
 
 export default function Dashboard() {
 

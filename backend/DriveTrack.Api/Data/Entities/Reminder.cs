@@ -19,6 +19,7 @@ public class Reminder
     public bool IsCompleted { get; set; } = false;
 
     public DateTime? CompletedAt { get; set; }
+    public string CreatedByName { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
