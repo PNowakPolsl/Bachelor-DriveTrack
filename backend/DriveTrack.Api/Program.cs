@@ -11,6 +11,8 @@ using BCrypt.Net;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Json;
+using System.Text.Json;
+
 
 
 
@@ -49,15 +51,62 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Wpisz: Bearer {twój_token}",
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+{
+    if (builder.Environment.IsEnvironment("Testing") || builder.Environment.IsDevelopment())
+    {
+        // w testach i w Development używamy InMemory
+        options.UseInMemoryDatabase("DriveTrack_DevDb");
+    }
+    else
+    {
+        // produkcyjnie – Postgres
+        var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connStr))
+        {
+            throw new InvalidOperationException("Brak ConnectionStrings:DefaultConnection w konfiguracji.");
+        }
+
+        options.UseNpgsql(connStr);
+    }
+});
+
+
 
 builder.Services.AddCors(opt =>
 {
@@ -84,13 +133,20 @@ static (DateOnly From, DateOnly To) GetSixMonthsRange(DateOnly? from, DateOnly? 
     var today = DateOnly.FromDateTime(DateTime.UtcNow);
     var end = to ?? today;
 
+    // Jeśli front poda konkretny zakres "from" – używamy dokładnie tego,
+    // bez kombinowania z ostatnimi 6 miesiącami.
+    if (from is not null)
+    {
+        return (from.Value, end);
+    }
+
+    // Domyślnie: tak jak wcześniej – ostatnie ~6 miesięcy
     var startMonth = end.AddMonths(-5);
     var start = new DateOnly(startMonth.Year, startMonth.Month, 1);
 
-    if (from is not null && from > start) start = from.Value;
-
     return (start, end);
 }
+
 
 static Guid? GetCurrentUserId(HttpContext httpContext)
 {
@@ -779,32 +835,45 @@ app.MapGet("/reports/monthly-expenses", async (
     HttpContext http,
     AppDbContext db,
     DateOnly? from,
-    DateOnly? to
+    DateOnly? to,
+    Guid? vehicleId
 ) =>
 {
     var userId = GetCurrentUserId(http);
     if (userId is null) return Results.Unauthorized();
 
+    // lista pojazdów usera
     var vehicleIds = await db.UserVehicles
         .Where(uv => uv.UserId == userId.Value)
         .Select(uv => uv.VehicleId)
         .ToListAsync();
+
+    // jeśli wybrano konkretny pojazd – sprawdź dostęp i zawęź listę
+    if (vehicleId is not null)
+    {
+        if (!vehicleIds.Contains(vehicleId.Value))
+            return Results.Forbid();
+
+        vehicleIds = new List<Guid> { vehicleId.Value };
+    }
 
     var (start, end) = GetSixMonthsRange(from, to);
 
     var raw = await db.Expenses
         .Where(e => vehicleIds.Contains(e.VehicleId))
         .Where(e => e.Date >= start && e.Date <= end)
+        .Where(e => e.Amount > 0)
         .Select(e => new { e.Date, e.Amount })
         .ToListAsync();
 
     var list = raw
         .GroupBy(e => new { e.Date.Year, e.Date.Month })
-        .Select(g => new MonthlyExpenseReportItem(
-            g.Key.Year,
-            g.Key.Month,
-            g.Sum(x => x.Amount)
-        ))
+        .Select(g => new
+        {
+            Year = g.Key.Year,
+            Month = g.Key.Month,
+            TotalAmount = g.Sum(x => x.Amount)
+        })
         .OrderBy(x => x.Year)
         .ThenBy(x => x.Month)
         .ToList();
@@ -814,11 +883,13 @@ app.MapGet("/reports/monthly-expenses", async (
 
 
 
+
 app.MapGet("/reports/expenses-by-category", async (
     HttpContext http,
     AppDbContext db,
     DateOnly? from,
-    DateOnly? to
+    DateOnly? to,
+    Guid? vehicleId
 ) =>
 {
     var userId = GetCurrentUserId(http);
@@ -828,6 +899,14 @@ app.MapGet("/reports/expenses-by-category", async (
         .Where(uv => uv.UserId == userId.Value)
         .Select(uv => uv.VehicleId)
         .ToListAsync();
+
+    if (vehicleId is not null)
+    {
+        if (!vehicleIds.Contains(vehicleId.Value))
+            return Results.Forbid();
+
+        vehicleIds = new List<Guid> { vehicleId.Value };
+    }
 
     var (start, end) = GetSixMonthsRange(from, to);
 
@@ -837,18 +916,13 @@ app.MapGet("/reports/expenses-by-category", async (
         .Select(e => new
         {
             Amount = e.Amount,
-            CategoryName = e.Category != null
-                ? e.Category.Name
-                : "Brak kategorii"
+            CategoryName = e.Category != null ? e.Category.Name : "Brak kategorii"
         })
         .ToListAsync();
 
     var list = raw
         .GroupBy(x => x.CategoryName)
-        .Select(g => new CategoryExpenseReportItem(
-            g.Key,
-            g.Sum(x => x.Amount)
-        ))
+        .Select(g => new CategoryExpenseReportItem(g.Key, g.Sum(x => x.Amount)))
         .OrderByDescending(x => x.Total)
         .ToList();
 
@@ -857,11 +931,13 @@ app.MapGet("/reports/expenses-by-category", async (
 
 
 
+
 app.MapGet("/reports/fuel-consumption", async (
     HttpContext http,
     AppDbContext db,
     DateOnly? from,
-    DateOnly? to
+    DateOnly? to,
+    Guid? vehicleId
 ) =>
 {
     var userId = GetCurrentUserId(http);
@@ -872,6 +948,88 @@ app.MapGet("/reports/fuel-consumption", async (
         .Select(uv => uv.VehicleId)
         .ToListAsync();
 
+    if (vehicleId is not null)
+    {
+        if (!vehicleIds.Contains(vehicleId.Value))
+            return Results.Forbid();
+
+        vehicleIds = new List<Guid> { vehicleId.Value };
+    }
+
+    var (start, end) = GetSixMonthsRange(from, to);
+
+    var entries = await db.FuelEntries
+        .Where(x => vehicleIds.Contains(x.VehicleId))
+        .Where(x => x.IsFullTank == true && x.OdometerKm >= 0 &&
+                    x.Unit != null && x.Unit.ToLower() == "l")
+        .Where(x => x.Date >= start && x.Date <= end)
+        .OrderBy(x => x.VehicleId).ThenBy(x => x.Date).ThenBy(x => x.OdometerKm)
+        .ToListAsync();
+
+    var buckets = new Dictionary<(int Year, int Month), (double Volume, double Distance)>();
+
+    foreach (var vehicleGroup in entries.GroupBy(e => e.VehicleId))
+    {
+        FuelEntry? prev = null;
+        foreach (var current in vehicleGroup)
+        {
+            if (prev is null) { prev = current; continue; }
+
+            var distance = current.OdometerKm - prev.OdometerKm;
+            if (distance <= 0) { prev = current; continue; }
+
+            var key = (current.Date.Year, current.Date.Month);
+
+            if (!buckets.TryGetValue(key, out var agg)) agg = (0, 0);
+            agg.Volume += (double)current.Volume;
+            agg.Distance += (double)distance;
+            buckets[key] = agg;
+
+            prev = current;
+        }
+    }
+
+    var result = buckets
+        .Select(kv =>
+        {
+            var (year, month) = kv.Key;
+            var (volume, distance) = kv.Value;
+            var avg = distance > 0 ? (volume * 100.0) / distance : 0.0;
+
+            return new { Year = year, Month = month, AverageConsumption = avg };
+        })
+        .OrderBy(x => x.Year).ThenBy(x => x.Month)
+        .ToList();
+
+    return Results.Ok(result);
+});
+
+
+
+app.MapGet("/reports/ev-consumption", async (
+    HttpContext http,
+    AppDbContext db,
+    DateOnly? from,
+    DateOnly? to,
+    Guid? vehicleId
+) =>
+{
+    var userId = GetCurrentUserId(http);
+    if (userId is null) return Results.Unauthorized();
+
+    var vehicleIds = await db.UserVehicles
+        .Where(uv => uv.UserId == userId.Value)
+        .Select(uv => uv.VehicleId)
+        .ToListAsync();
+
+    if (vehicleId is not null)
+    {
+        if (!vehicleIds.Contains(vehicleId.Value))
+            return Results.Forbid();
+
+        vehicleIds = new List<Guid> { vehicleId.Value };
+    }
+
     var (start, end) = GetSixMonthsRange(from, to);
 
     var entries = await db.FuelEntries
@@ -880,14 +1038,15 @@ app.MapGet("/reports/fuel-consumption", async (
             x.IsFullTank == true &&
             x.OdometerKm >= 0 &&
             x.Unit != null &&
-            x.Unit.ToLower() == "l"
+            x.Unit.ToLower() == "kwh"
         )
+        .Where(x => x.Date >= start && x.Date <= end)
         .OrderBy(x => x.VehicleId)
         .ThenBy(x => x.Date)
         .ThenBy(x => x.OdometerKm)
         .ToListAsync();
 
-    var buckets = new Dictionary<(int Year, int Month), (double Volume, double Distance)>();
+    var buckets = new Dictionary<(int Year, int Month), (double Energy, double Distance)>();
 
     foreach (var vehicleGroup in entries.GroupBy(e => e.VehicleId))
     {
@@ -902,28 +1061,19 @@ app.MapGet("/reports/fuel-consumption", async (
             }
 
             var distance = current.OdometerKm - prev.OdometerKm;
-
             if (distance <= 0)
             {
                 prev = current;
                 continue;
             }
 
-            var endDate = current.Date;
+            var key = (current.Date.Year, current.Date.Month);
 
-            if (endDate < start || endDate > end)
-            {
-                prev = current;
-                continue;
-            }
-
-            var key = (endDate.Year, endDate.Month);
             if (!buckets.TryGetValue(key, out var agg))
                 agg = (0, 0);
 
-            agg.Volume += (double)current.Volume;
+            agg.Energy += (double)current.Volume;
             agg.Distance += (double)distance;
-
             buckets[key] = agg;
 
             prev = current;
@@ -934,17 +1084,182 @@ app.MapGet("/reports/fuel-consumption", async (
         .Select(kv =>
         {
             var (year, month) = kv.Key;
-            var (volume, distance) = kv.Value;
-            var avg = distance > 0 ? (volume * 100.0) / distance : 0.0;
+            var (energy, distance) = kv.Value;
+            var avg = distance > 0 ? (energy * 100.0) / distance : 0.0;
 
-            return new FuelConsumptionReportItem(
-                year,
-                month,
-                avg
-            );
+            return new
+            {
+                Year = year,
+                Month = month,
+                AverageConsumption = avg
+            };
         })
         .OrderBy(x => x.Year)
         .ThenBy(x => x.Month)
+        .ToList();
+
+    return Results.Ok(result);
+});
+
+
+
+app.MapGet("/reports/vehicle-expenses", async (
+    HttpContext http,
+    AppDbContext db,
+    DateOnly? from,
+    DateOnly? to
+) =>
+{
+    var userId = GetCurrentUserId(http);
+    if (userId is null) return Results.Unauthorized();
+
+    var vehicleIds = await db.UserVehicles
+        .Where(uv => uv.UserId == userId.Value)
+        .Select(uv => uv.VehicleId)
+        .ToListAsync();
+
+    var (start, end) = GetSixMonthsRange(from, to);
+
+    var raw = await db.Expenses
+        .Where(e => vehicleIds.Contains(e.VehicleId))
+        .Where(e => e.Date >= start && e.Date <= end)
+        .Join(db.Vehicles,
+            e => e.VehicleId,
+            v => v.Id,
+            (e, v) => new { e.VehicleId, VehicleName = v.Name, e.Amount })
+        .ToListAsync();
+
+    var list = raw
+        .GroupBy(x => new { x.VehicleId, x.VehicleName })
+        .Select(g => new VehicleExpensesReportItem(
+            g.Key.VehicleId,
+            g.Key.VehicleName,
+            g.Sum(x => x.Amount)
+        ))
+        .OrderByDescending(x => x.TotalAmount)
+        .ToList();
+
+    return Results.Ok(list);
+});
+
+app.MapGet("/reports/vehicle-cost-per-100km", async (
+    HttpContext http,
+    AppDbContext db,
+    DateOnly? from,
+    DateOnly? to
+) =>
+{
+    var userId = GetCurrentUserId(http);
+    if (userId is null) return Results.Unauthorized();
+
+    var vehicleIds = await db.UserVehicles
+        .Where(uv => uv.UserId == userId.Value)
+        .Select(uv => uv.VehicleId)
+        .ToListAsync();
+
+    var (start, end) = GetSixMonthsRange(from, to);
+
+    // 1) ŁĄCZNY KOSZT NA POJAZD
+    var costPerVehicle = await db.Expenses
+        .Where(e => vehicleIds.Contains(e.VehicleId))
+        .Where(e => e.Date >= start && e.Date <= end)
+        .GroupBy(e => e.VehicleId)
+        .Select(g => new
+        {
+            VehicleId = g.Key,
+            Total = g.Sum(x => x.Amount)
+        })
+        .ToDictionaryAsync(x => x.VehicleId, x => x.Total);
+
+    if (!costPerVehicle.Any())
+        return Results.Ok(Array.Empty<VehicleCostPer100KmReportItem>());
+
+    // 2) DYSTANS NA POJAZD (z tankowań z przebiegiem)
+    var fuelEntries = await db.FuelEntries
+        .Where(x => vehicleIds.Contains(x.VehicleId))
+        .Where(x =>
+            x.IsFullTank == true &&
+            x.OdometerKm >= 0
+        )
+        .OrderBy(x => x.VehicleId)
+        .ThenBy(x => x.Date)
+        .ThenBy(x => x.OdometerKm)
+        .ToListAsync();
+
+    var distancePerVehicle = new Dictionary<Guid, double>();
+
+    foreach (var group in fuelEntries.GroupBy(e => e.VehicleId))
+    {
+        FuelEntry? prev = null;
+
+        foreach (var current in group)
+        {
+            if (prev is null)
+            {
+                prev = current;
+                continue;
+            }
+
+            var distance = current.OdometerKm - prev.OdometerKm;
+            if (distance <= 0)
+            {
+                prev = current;
+                continue;
+            }
+
+            var endDate = current.Date;
+            if (endDate < start || endDate > end)
+            {
+                prev = current;
+                continue;
+            }
+
+            if (!distancePerVehicle.TryGetValue(group.Key, out var d))
+                d = 0;
+
+            d += distance;
+            distancePerVehicle[group.Key] = d;
+
+            prev = current;
+        }
+    }
+
+    if (!distancePerVehicle.Any())
+        return Results.Ok(Array.Empty<VehicleCostPer100KmReportItem>());
+
+    // 3) Nazwy pojazdów
+    var vehicleNames = await db.Vehicles
+        .Where(v => vehicleIds.Contains(v.Id))
+        .Select(v => new { v.Id, v.Name })
+        .ToDictionaryAsync(v => v.Id, v => v.Name);
+
+    // 4) Łączenie: koszt + dystans -> zł / 100 km
+    var result = new List<VehicleCostPer100KmReportItem>();
+
+    foreach (var kv in distancePerVehicle)
+    {
+        var vehicleId = kv.Key;
+        var distance = kv.Value;
+
+        if (distance <= 0) continue;
+
+        costPerVehicle.TryGetValue(vehicleId, out var totalCost);
+        if (totalCost <= 0) continue;
+
+        var costPer100 = (double)totalCost * 100.0 / distance;
+
+        vehicleNames.TryGetValue(vehicleId, out var name);
+        name ??= "(bez nazwy)";
+
+        result.Add(new VehicleCostPer100KmReportItem(
+            vehicleId,
+            name,
+            Math.Round(costPer100, 2)
+        ));
+    }
+
+    result = result
+        .OrderByDescending(x => x.CostPer100Km)
         .ToList();
 
     return Results.Ok(result);
@@ -1312,9 +1627,11 @@ app.MapGet("/me/vehicles", async (HttpContext http, AppDbContext db) =>
     if (userId is null)
         return Results.Unauthorized();
 
-    var list = await db.UserVehicles
+    // pojazdy usera
+    var vehicles = await db.UserVehicles
         .Where(uv => uv.UserId == userId.Value)
-        .Join(db.Vehicles, uv => uv.VehicleId, v => v.Id, (uv, v) => new {
+        .Join(db.Vehicles, uv => uv.VehicleId, v => v.Id, (uv, v) => new
+        {
             v.Id,
             v.Name,
             v.Make,
@@ -1325,8 +1642,45 @@ app.MapGet("/me/vehicles", async (HttpContext http, AppDbContext db) =>
         })
         .ToListAsync();
 
-    return Results.Ok(list);
+    var vehicleIds = vehicles.Select(v => v.Id).ToList();
+
+    // jednostki paliw per pojazd (L / kWh / inne)
+    var units = await db.VehicleFuelTypes
+        .Where(x => vehicleIds.Contains(x.VehicleId))
+        .Join(db.FuelTypes,
+            link => link.FuelTypeId,
+            ft => ft.Id,
+            (link, ft) => new { link.VehicleId, Unit = ft.DefaultUnit })
+        .ToListAsync();
+
+    var unitsMap = units
+        .GroupBy(x => x.VehicleId)
+        .ToDictionary(
+            g => g.Key,
+            g => g.Select(x => x.Unit).Where(u => u != null).Distinct().ToList()
+        );
+
+    var result = vehicles.Select(v =>
+    {
+        unitsMap.TryGetValue(v.Id, out var fuelUnits);
+        fuelUnits ??= new List<string>();
+
+        return new
+        {
+            v.Id,
+            v.Name,
+            v.Make,
+            v.Model,
+            v.Plate,
+            v.Year,
+            v.Role,
+            FuelUnits = fuelUnits
+        };
+    });
+
+    return Results.Ok(result);
 });
+
 
 
 app.MapGet("/vehicles/{vehicleId:guid}/users", async (
@@ -1524,3 +1878,6 @@ app.MapGet("/vehicles/{vehicleId:guid}/stations", async (
 await app.SeedAsync();
 
 app.Run();
+
+public partial class Program { }
+

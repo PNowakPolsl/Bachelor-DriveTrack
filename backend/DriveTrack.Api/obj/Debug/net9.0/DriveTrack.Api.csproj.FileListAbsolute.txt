@@ -148,3 +148,4 @@ C:\Users\nowak\Inzynierka\Bachelor-DriveTrack\backend\DriveTrack.Api\bin\Debug\n
 C:\Users\nowak\Inzynierka\Bachelor-DriveTrack\backend\DriveTrack.Api\bin\Debug\net9.0\System.Management.dll
 C:\Users\nowak\Inzynierka\Bachelor-DriveTrack\backend\DriveTrack.Api\bin\Debug\net9.0\runtimes\win\lib\net7.0\System.Management.dll
 C:\Users\nowak\Inzynierka\Bachelor-DriveTrack\backend\DriveTrack.Api\bin\Debug\net9.0\BCrypt.Net-Next.dll
+C:\Users\nowak\Inzynierka\Bachelor-DriveTrack\backend\DriveTrack.Api\bin\Debug\net9.0\Microsoft.EntityFrameworkCore.InMemory.dll

@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DriveTrack.Api", "DriveTrack.Api\DriveTrack.Api.csproj", "{44D3A164-2357-4BB9-AD78-C1D0F5EF914D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DriveTrack.Api.Tests", "DriveTrack.Api.Tests\DriveTrack.Api.Tests.csproj", "{DE051EB8-6B70-4D97-A38D-4A877C3B741E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{44D3A164-2357-4BB9-AD78-C1D0F5EF914D}.Release|x64.Build.0 = Release|Any CPU
 		{44D3A164-2357-4BB9-AD78-C1D0F5EF914D}.Release|x86.ActiveCfg = Release|Any CPU
 		{44D3A164-2357-4BB9-AD78-C1D0F5EF914D}.Release|x86.Build.0 = Release|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Debug|x64.Build.0 = Debug|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Debug|x86.Build.0 = Debug|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Release|x64.ActiveCfg = Release|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Release|x64.Build.0 = Release|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Release|x86.ActiveCfg = Release|Any CPU
+		{DE051EB8-6B70-4D97-A38D-4A877C3B741E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

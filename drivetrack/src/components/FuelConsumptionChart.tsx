@@ -10,17 +10,19 @@ import {
 
 type Props = {
   data: { month: string; consumption: number }[];
+  rangeLabel: string;
 };
 
-export default function FuelConsumption({ data }: Props) {
+export default function FuelConsumption({ data, rangeLabel }: Props) {
   return (
     <div className="w-full h-full p-6 bg-white rounded-2xl shadow-md">
       <h2 className="text-xl font-semibold text-gray-800 mb-1">
         Średnie spalanie L/100km
       </h2>
       <p className="text-gray-500 text-md mb-6">
-        Dane z ostatnich 6 miesięcy (PB/ON/LPG – jednostka L)
+        Dane z {rangeLabel} (PB/ON/LPG – jednostka L)
       </p>
+
 
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data}>
