@@ -171,7 +171,6 @@ public class VehiclesTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Users_Should_See_Only_Their_Vehicles_And_Forbidden_For_Others()
     {
-        // User 1
         var token1 = await RegisterAndLoginAsync();
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token1);
@@ -193,7 +192,6 @@ public class VehiclesTests : IClassFixture<CustomWebApplicationFactory>
         var created1 = await resp1.Content.ReadFromJsonAsync<CreatedVehicleDto>();
         created1.Should().NotBeNull();
 
-        // User 2
         var token2 = await RegisterAndLoginAsync();
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token2);

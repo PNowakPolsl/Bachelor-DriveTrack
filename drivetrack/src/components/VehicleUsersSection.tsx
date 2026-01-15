@@ -22,7 +22,6 @@ export default function VehicleUsersSection({ vehicleId }: Props) {
     role: "Driver",
   });
 
-  // nowy state na modala
   const [userToRemove, setUserToRemove] = useState<VehicleUser | null>(null);
 
   async function load() {
@@ -54,7 +53,6 @@ export default function VehicleUsersSection({ vehicleId }: Props) {
     }
   }
 
-  // zamiast window.confirm – najpierw tylko otwieramy modala
   function askRemove(user: VehicleUser) {
     setUserToRemove(user);
     setError("");

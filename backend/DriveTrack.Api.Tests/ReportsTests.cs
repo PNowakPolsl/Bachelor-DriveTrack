@@ -216,7 +216,6 @@ public class ReportsTests : IClassFixture<CustomWebApplicationFactory>
         var d1 = new DateOnly(prevMonth.Year, prevMonth.Month, 10);
         var d2 = new DateOnly(today.Year, today.Month, 5);
 
-        // wydatek w poprzednim miesiącu
         var body1 = new
         {
             categoryId = category.Id,
@@ -228,7 +227,6 @@ public class ReportsTests : IClassFixture<CustomWebApplicationFactory>
         var r1 = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/expenses", body1);
         r1.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // 2 wydatki w bieżącym miesiącu
         var body2 = new
         {
             categoryId = category.Id,
@@ -353,7 +351,7 @@ public class ReportsTests : IClassFixture<CustomWebApplicationFactory>
         {
             fuelTypeId = fuelType.Id,
             date = baseDate,
-            volume = 40m, // zużycie między 1000 i 1500
+            volume = 40m,
             unit = "L",
             pricePerUnit = 6.0m,
             odometerKm = 1500,

@@ -90,12 +90,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (builder.Environment.IsEnvironment("Testing") || builder.Environment.IsDevelopment())
     {
-        // w testach i w Development używamy InMemory
         options.UseInMemoryDatabase("DriveTrack_DevDb");
     }
     else
     {
-        // produkcyjnie – Postgres
         var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
         if (string.IsNullOrWhiteSpace(connStr))
         {
@@ -133,14 +131,12 @@ static (DateOnly From, DateOnly To) GetSixMonthsRange(DateOnly? from, DateOnly? 
     var today = DateOnly.FromDateTime(DateTime.UtcNow);
     var end = to ?? today;
 
-    // Jeśli front poda konkretny zakres "from" – używamy dokładnie tego,
-    // bez kombinowania z ostatnimi 6 miesiącami.
+
     if (from is not null)
     {
         return (from.Value, end);
     }
 
-    // Domyślnie: tak jak wcześniej – ostatnie ~6 miesięcy
     var startMonth = end.AddMonths(-5);
     var start = new DateOnly(startMonth.Year, startMonth.Month, 1);
 
@@ -848,7 +844,6 @@ app.MapGet("/reports/monthly-expenses", async (
         .Select(uv => uv.VehicleId)
         .ToListAsync();
 
-    // jeśli wybrano konkretny pojazd – sprawdź dostęp i zawęź listę
     if (vehicleId is not null)
     {
         if (!vehicleIds.Contains(vehicleId.Value))
@@ -1159,7 +1154,6 @@ app.MapGet("/reports/vehicle-cost-per-100km", async (
 
     var (start, end) = GetSixMonthsRange(from, to);
 
-    // 1) ŁĄCZNY KOSZT NA POJAZD
     var costPerVehicle = await db.Expenses
         .Where(e => vehicleIds.Contains(e.VehicleId))
         .Where(e => e.Date >= start && e.Date <= end)
@@ -1174,7 +1168,6 @@ app.MapGet("/reports/vehicle-cost-per-100km", async (
     if (!costPerVehicle.Any())
         return Results.Ok(Array.Empty<VehicleCostPer100KmReportItem>());
 
-    // 2) DYSTANS NA POJAZD (z tankowań z przebiegiem)
     var fuelEntries = await db.FuelEntries
         .Where(x => vehicleIds.Contains(x.VehicleId))
         .Where(x =>
@@ -1227,13 +1220,11 @@ app.MapGet("/reports/vehicle-cost-per-100km", async (
     if (!distancePerVehicle.Any())
         return Results.Ok(Array.Empty<VehicleCostPer100KmReportItem>());
 
-    // 3) Nazwy pojazdów
     var vehicleNames = await db.Vehicles
         .Where(v => vehicleIds.Contains(v.Id))
         .Select(v => new { v.Id, v.Name })
         .ToDictionaryAsync(v => v.Id, v => v.Name);
 
-    // 4) Łączenie: koszt + dystans -> zł / 100 km
     var result = new List<VehicleCostPer100KmReportItem>();
 
     foreach (var kv in distancePerVehicle)
@@ -1267,7 +1258,6 @@ app.MapGet("/reports/vehicle-cost-per-100km", async (
 
 
 
-// Expenses
 app.MapGet("/vehicles/{vehicleId:guid}/expenses", async (
     HttpContext http,
     AppDbContext db,
@@ -1330,8 +1320,6 @@ app.MapPost("/vehicles/{vehicleId:guid}/expenses", async (
             );
         }
     }
-
-
     var exp = new Expense
     {
         Id = Guid.NewGuid(),
@@ -1363,7 +1351,6 @@ app.MapPost("/vehicles/{vehicleId:guid}/expenses", async (
 
 });
 
-// Reminders
 app.MapGet("/vehicles/{vehicleId:guid}/reminders", async (
     HttpContext http,
     AppDbContext db,
@@ -1547,7 +1534,6 @@ app.MapPost("/auth/login", async (AppDbContext db, IConfiguration config, LoginR
     }
     catch
     {
-        // na wypadek starych, zepsutych wpisów
         return Results.BadRequest("Invalid email or password.");
     }
 
@@ -1627,7 +1613,6 @@ app.MapGet("/me/vehicles", async (HttpContext http, AppDbContext db) =>
     if (userId is null)
         return Results.Unauthorized();
 
-    // pojazdy usera
     var vehicles = await db.UserVehicles
         .Where(uv => uv.UserId == userId.Value)
         .Join(db.Vehicles, uv => uv.VehicleId, v => v.Id, (uv, v) => new
@@ -1644,7 +1629,6 @@ app.MapGet("/me/vehicles", async (HttpContext http, AppDbContext db) =>
 
     var vehicleIds = vehicles.Select(v => v.Id).ToList();
 
-    // jednostki paliw per pojazd (L / kWh / inne)
     var units = await db.VehicleFuelTypes
         .Where(x => vehicleIds.Contains(x.VehicleId))
         .Join(db.FuelTypes,
@@ -1779,7 +1763,6 @@ app.MapGet("/dashboard/upcoming-reminders", async (
 
     var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-    // pojazdy, do których użytkownik ma dostęp
     var vehicleIds = await db.UserVehicles
         .Where(uv => uv.UserId == userId.Value)
         .Select(uv => uv.VehicleId)
@@ -1789,7 +1772,6 @@ app.MapGet("/dashboard/upcoming-reminders", async (
     if (!vehicleIds.Any())
         return Results.Ok(Array.Empty<object>());
 
-    // bierzemy tylko przyszłe, nieukończone przypomnienia
     var raw = await db.Reminders
         .Where(r =>
             vehicleIds.Contains(r.VehicleId) &&
@@ -1797,7 +1779,7 @@ app.MapGet("/dashboard/upcoming-reminders", async (
             r.DueDate >= today
         )
         .OrderBy(r => r.DueDate)
-        .Take(10)   // weźmy trochę więcej, potem i tak obetniemy do 3
+        .Take(10)
         .Select(r => new
         {
             r.Id,
@@ -1810,7 +1792,6 @@ app.MapGet("/dashboard/upcoming-reminders", async (
     if (!raw.Any())
         return Results.Ok(Array.Empty<object>());
 
-    // słownik pojazdów, żeby mieć nazwy
     var vehicleNames = await db.Vehicles
         .Where(v => vehicleIds.Contains(v.Id))
         .Select(v => new { v.Id, v.Name })
@@ -1837,7 +1818,7 @@ app.MapGet("/dashboard/upcoming-reminders", async (
         })
         .OrderBy(x => x.DaysLeft)
         .ThenBy(x => x.DueDate)
-        .Take(3) // tu faktycznie ograniczamy do 3
+        .Take(3)
         .ToList();
 
     return Results.Ok(result);
@@ -1861,11 +1842,11 @@ app.MapGet("/vehicles/{vehicleId:guid}/stations", async (
         .Select(g => new
         {
             Name = g.Key!,
-            LastDate = g.Max(x => x.Date) // żeby ostatnio użyte były wyżej
+            LastDate = g.Max(x => x.Date)
         })
         .OrderByDescending(x => x.LastDate)
         .Select(x => x.Name)
-        .Take(15)  // np. max 15 stacji
+        .Take(15)
         .ToListAsync();
 
     return Results.Ok(list);

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DriveTrack.Api.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+37aeb795a1e227c1c88d6f1958a609ed3544dd78")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3be86a22f2107f4e043ea399074fc58eda2f8d1d")]
 [assembly: System.Reflection.AssemblyProductAttribute("DriveTrack.Api.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DriveTrack.Api.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

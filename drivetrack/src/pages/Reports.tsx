@@ -113,7 +113,7 @@ export default function Reports() {
     };
   }, []);
 
-  // --- LISTY AUT DO SELECTÓW (z fallbackiem gdy fuelUnits nie ma) ---
+  // --- LISTY AUT DO SELECTÓW ---
   const fuelVehiclesStrict = useMemo(() => {
     return vehicles.filter((v) => v.fuelUnits.includes("l"));
   }, [vehicles]);
@@ -122,12 +122,9 @@ export default function Reports() {
     return vehicles.filter((v) => v.fuelUnits.includes("kwh"));
   }, [vehicles]);
 
-  // Jeśli backend nie zwróci fuelUnits -> strict listy będą puste.
-  // Wtedy pokazujemy wszystkie auta, żeby UI działał.
   const fuelVehicles = fuelVehiclesStrict.length > 0 ? fuelVehiclesStrict : vehicles;
   const evVehicles = evVehiclesStrict.length > 0 ? evVehiclesStrict : vehicles;
 
-  // Autoreset jeśli aktualny wybór nie istnieje w danej liście
   useEffect(() => {
     if (vehicleForFuelConsumption !== "all") {
       const ok = fuelVehicles.some((v) => v.id === vehicleForFuelConsumption);
@@ -142,7 +139,6 @@ export default function Reports() {
     }
   }, [evVehicles, vehicleForEvConsumption]);
 
-  // pobierz listę aut
   useEffect(() => {
     async function fetchVehicles(): Promise<void> {
       try {
@@ -166,7 +162,6 @@ export default function Reports() {
     fetchVehicles();
   }, []);
 
-  // pobierz raporty
   useEffect(() => {
     async function fetchReports(): Promise<void> {
       setLoading(true);

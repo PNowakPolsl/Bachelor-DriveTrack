@@ -6,7 +6,6 @@ import { register, saveAuth } from "../api/auth";
 export default function Registration() {
   const navigate = useNavigate();
 
-  // Walidacja rejestracji
   const [formData, setFormData] = useState({
     name: "",
     email: "",

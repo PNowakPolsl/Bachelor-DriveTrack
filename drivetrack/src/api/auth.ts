@@ -58,7 +58,6 @@ export function logout() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// pomocniczo – tylko „użyteczny” user bez tokena
 export function getCurrentUser() {
   const auth = getAuth();
   if (!auth) return null;

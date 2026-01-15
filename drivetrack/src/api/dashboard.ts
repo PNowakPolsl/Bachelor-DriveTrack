@@ -1,4 +1,3 @@
-// src/api/dashboard.ts
 const API_URL = "http://localhost:5018";
 
 export type UpcomingReminder = {

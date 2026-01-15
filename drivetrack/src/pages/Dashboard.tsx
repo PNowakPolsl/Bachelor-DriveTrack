@@ -85,13 +85,11 @@ type VehicleDetailsApi = {
 
 type VehicleDashboardCard = {
   vehicleId: string;
-  displayName: string; // np. "Moja Skoda"
-  makeModel: string; // np. "Skoda Fabia 4"
-  fuelLabel: string; // np. "Benzyna/LPG" albo "EV"
-  // spalanie
+  displayName: string;
+  makeModel: string;
+  fuelLabel: string;
   consumptionValue: number | null;
   consumptionUnit: "L/100km" | "kWh/100km" | null;
-  // wydatki w tym miesiącu
   expensesThisMonth: number;
 };
 
@@ -159,18 +157,14 @@ function normalizeFuelTypes(raw?: VehicleFuelTypeApi[]) {
 }
 
 function buildFuelLabel(fuelTypes: { name: string; unit: string }[], fallbackUnits: string[]): { label: string; isEv: boolean } {
-  // EV jeśli jakikolwiek fuel type ma unit kwh
   const isEv = fuelTypes.some(ft => ft.unit === "kwh") || fallbackUnits.includes("kwh");
 
   if (fuelTypes.length > 0) {
-    // Weź tylko unikalne nazwy paliw
     const names = Array.from(new Set(fuelTypes.map(ft => ft.name)));
-    // Jeśli EV jest jedyne -> "EV", jeśli mix -> "EV/Benzyna" itd.
     const label = names.join("/");
     return { label: label || (isEv ? "EV" : "Spalinowe"), isEv };
   }
 
-  // fallback gdyby nie było FuelTypes
   if (isEv) return { label: "EV", isEv: true };
   return { label: "Benzyna/LPG/Diesel", isEv: false };
 }
@@ -191,10 +185,8 @@ export default function Dashboard() {
         setLoading(true);
         setError(null);
 
-        // 1) przypomnienia (jak było)
         const remindersReq = http.get<UpcomingReminderApi[]>("/dashboard/upcoming-reminders");
 
-        // 2) lista pojazdów (z make/model + FuelUnits)
         const vehiclesReq = http.get<MeVehicleApi[]>("/me/vehicles");
 
         const [remindersRes, vehiclesRes] = await Promise.all([remindersReq, vehiclesReq]);
@@ -224,7 +216,6 @@ export default function Dashboard() {
           return;
         }
 
-        // 3) dla każdego auta: pobierz details + raporty per vehicle
         const perVehicle = await Promise.all(
           meVehicles.map(async (v) => {
             const [detailsRes, monthlyRes, fuelRes, evRes] = await Promise.all([
@@ -233,10 +224,10 @@ export default function Dashboard() {
                 params: { from: fromMonth, to: toToday, vehicleId: v.id },
               }),
               http.get<FuelConsumptionReportItemApi[]>("/reports/fuel-consumption", {
-                params: { vehicleId: v.id }, // zakres domyślny 6m
+                params: { vehicleId: v.id },
               }),
               http.get<FuelConsumptionReportItemApi[]>("/reports/ev-consumption", {
-                params: { vehicleId: v.id }, // zakres domyślny 6m
+                params: { vehicleId: v.id },
               }),
             ]);
 
@@ -270,7 +261,6 @@ export default function Dashboard() {
           })
         );
 
-        // ładne sortowanie: najpierw wg wydatków malejąco
         perVehicle.sort((a, b) => b.expensesThisMonth - a.expensesThisMonth);
 
         setCards(perVehicle);

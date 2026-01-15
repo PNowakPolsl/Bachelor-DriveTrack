@@ -123,7 +123,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
             dueDate = due
         };
 
-        // POST
         var postResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/reminders", body);
         postResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -136,7 +135,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         created.IsCompleted.Should().BeFalse();
         created.CreatedByName.Should().NotBeNullOrWhiteSpace();
 
-        // GET lista
         var getResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/reminders");
         getResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -175,11 +173,9 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task CreateReminder_For_ForeignVehicle_Should_Return_403()
     {
-        // user1 z autem
         var token1 = await RegisterAndLoginAsync("r1");
         var vehicle1 = await CreateVehicleAsync(token1, "Auto user1");
 
-        // user2 próbuje dodać przypomnienie do auta user1
         var token2 = await RegisterAndLoginAsync("r2");
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token2);
@@ -239,7 +235,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var postResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/reminders", body);
         postResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // GET bez tokena
         _client.DefaultRequestHeaders.Authorization = null;
 
         var getResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/reminders");
@@ -257,7 +252,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        // zaległe, nieukończone
         var overdueBody = new
         {
             title = "Stare niezrobione",
@@ -267,7 +261,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var overdueResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/reminders", overdueBody);
         overdueResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // nadchodzące
         var upcomingBody = new
         {
             title = "Nadchodzące",
@@ -277,7 +270,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var upcomingResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/reminders", upcomingBody);
         upcomingResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // zaległe ale już zrobione
         var doneBody = new
         {
             title = "Stare zrobione",
@@ -290,12 +282,10 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var doneReminder = await doneResp.Content.ReadFromJsonAsync<ReminderDto>();
         doneReminder.Should().NotBeNull();
 
-        // oznacz jako wykonane
         var patchBody = new { isCompleted = true };
         var patchResp = await _client.PatchAsync($"/reminders/{doneReminder!.Id}", JsonContent.Create(patchBody));
         patchResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        // GET onlyOverdue
         var getResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/reminders?onlyOverdue=true");
         getResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -322,7 +312,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        // przeszłe
         var oldBody = new
         {
             title = "Stare",
@@ -332,7 +321,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var oldResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/reminders", oldBody);
         oldResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // przyszłe 1
         var up1Body = new
         {
             title = "Up1",
@@ -342,7 +330,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var up1Resp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/reminders", up1Body);
         up1Resp.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // przyszłe 2
         var up2Body = new
         {
             title = "Up2",
@@ -420,7 +407,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var patchResp = await _client.PatchAsync($"/reminders/{reminder!.Id}", JsonContent.Create(patchBody));
         patchResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        // GET i sprawdzamy zmiany
         var getResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/reminders");
         getResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -438,7 +424,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PatchReminder_WithoutAccess_Should_Return_403()
     {
-        // user1 z przypomnieniem
         var token1 = await RegisterAndLoginAsync("p1");
         var vehicle1 = await CreateVehicleAsync(token1, "Auto p1");
 
@@ -458,7 +443,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var reminder = await postResp.Content.ReadFromJsonAsync<ReminderDto>();
         reminder.Should().NotBeNull();
 
-        // user2 próbuje patch
         var token2 = await RegisterAndLoginAsync("p2");
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token2);
@@ -491,11 +475,9 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var reminder = await postResp.Content.ReadFromJsonAsync<ReminderDto>();
         reminder.Should().NotBeNull();
 
-        // DELETE
         var delResp = await _client.DeleteAsync($"/reminders/{reminder!.Id}");
         delResp.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        // lista nie powinna zawierać
         var getResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/reminders");
         getResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -504,7 +486,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
 
         list!.Should().NotContain(r => r.Id == reminder.Id);
 
-        // drugi DELETE -> 404
         var del2Resp = await _client.DeleteAsync($"/reminders/{reminder.Id}");
         del2Resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -512,7 +493,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task DeleteReminder_WithoutAccess_Should_Return_403()
     {
-        // user1
         var token1 = await RegisterAndLoginAsync("d1");
         var vehicle1 = await CreateVehicleAsync(token1, "Auto d1");
 
@@ -532,7 +512,6 @@ public class RemindersTests : IClassFixture<CustomWebApplicationFactory>
         var reminder = await postResp.Content.ReadFromJsonAsync<ReminderDto>();
         reminder.Should().NotBeNull();
 
-        // user2 próbuje DELETE
         var token2 = await RegisterAndLoginAsync("d2");
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token2);

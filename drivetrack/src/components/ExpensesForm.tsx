@@ -43,7 +43,6 @@ export default function ExpensesForm({
   const [station, setStation] = useState("");
   const [isFullTank, setIsFullTank] = useState(true);
 
-  // 🔔 Czy pokazywać okienko z potwierdzeniem przyszłej daty
   const [showFutureConfirm, setShowFutureConfirm] = useState(false);
 
   const isFuel = useMemo(() => {
@@ -64,7 +63,6 @@ export default function ExpensesForm({
   if (!isFuel) return;
 
   (async () => {
-    // 1) paliwa
     const vehicle = await getVehicle(activeVehicleId);
     setFuelTypes(vehicle.fuelTypes);
 
@@ -73,7 +71,6 @@ export default function ExpensesForm({
       setUnit(vehicle.fuelTypes[0].defaultUnit);
     }
 
-    // 2) STACJE dla tego pojazdu
     try {
       const stations = await listStations(activeVehicleId);
       setKnownStations(stations);
@@ -113,11 +110,9 @@ export default function ExpensesForm({
     return true;
   };
 
-  // 🔍 Sprawdzenie, czy data jest w przyszłości ( > dzisiaj )
   const isDateInFuture = () => {
     if (!form.date) return false;
 
-    // form.date to "YYYY-MM-DD"
     const selected = new Date(form.date + "T00:00:00");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -125,7 +120,6 @@ export default function ExpensesForm({
     return selected.getTime() > today.getTime();
   };
 
-  // 🧠 właściwy zapis (to co wcześniej było w środku submit)
   const performSubmit = async () => {
     if (!validateOdometer(form.odometerKm)) {
       return;
@@ -169,11 +163,9 @@ export default function ExpensesForm({
     }
   };
 
-  // 🔘 obsługa kliknięcia Zapisz
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // jeśli data w przyszłości → pokaż popup i dopiero TAM zdecydujemy
     if (isDateInFuture()) {
       setShowFutureConfirm(true);
       return;

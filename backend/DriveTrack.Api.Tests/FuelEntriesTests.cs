@@ -52,8 +52,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         string? Station
     );
 
-    // DTO dla odpowiedzi z POST /vehicles/{id}/fuel-entries
-    // oraz z GET /vehicles/{id}/expenses (gdy tworzony jest wydatek "Paliwo")
     private record CategoryRefDto(
         Guid CategoryId,
         string Name
@@ -160,7 +158,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task CreateFuelEntry_Then_GetFuelEntries_Should_Return_It()
     {
-        // arrange
         var token = await RegisterAndLoginAsync();
         var vehicle = await CreateVehicleAsync(token, "Auto do tankowania");
         var fuelType = await CreateFuelTypeAsync("PB95", "L");
@@ -186,7 +183,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
             station = "Orlen Test"
         };
 
-        // act 1: POST – backend zwraca tutaj WYDATEK (bo istnieje globalna kategoria "Paliwo")
         var postResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/fuel-entries", body);
         postResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -199,7 +195,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         createdExpense.Category.Name.ToLower().Should().Be("paliwo");
         createdExpense.CreatedByName.Should().NotBeNullOrWhiteSpace();
 
-        // act 2: GET lista tankowań
         var getResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/fuel-entries");
         getResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -222,7 +217,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         var fuelType = await CreateFuelTypeAsync("PB98", "L");
         await AssignFuelTypeToVehicleAsync(vehicle.Id, fuelType.Id, token);
 
-        // brak Authorization header
         _client.DefaultRequestHeaders.Authorization = null;
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
@@ -247,13 +241,11 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task CreateFuelEntry_For_ForeignVehicle_Should_Return_403()
     {
-        // user1 z autem
         var token1 = await RegisterAndLoginAsync("fu1");
         var vehicle1 = await CreateVehicleAsync(token1, "Auto user1");
         var fuelType = await CreateFuelTypeAsync("ON", "L");
         await AssignFuelTypeToVehicleAsync(vehicle1.Id, fuelType.Id, token1);
 
-        // user2 próbuje zatankować auto user1
         var token2 = await RegisterAndLoginAsync("fu2");
 
         _client.DefaultRequestHeaders.Authorization =
@@ -295,7 +287,7 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         {
             fuelTypeId = fuelType.Id,
             date = today,
-            volume = 0m, // <= 0 -> 400
+            volume = 0m,
             unit = "L",
             pricePerUnit = 6.5m,
             odometerKm = 100_100,
@@ -324,7 +316,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        // 1) pierwsze tankowanie – przebieg 101000
         var body1 = new
         {
             fuelTypeId = fuelType.Id,
@@ -340,7 +331,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         var resp1 = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/fuel-entries", body1);
         resp1.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // 2) drugie tankowanie z mniejszym przebiegiem -> 400
         var body2 = new
         {
             fuelTypeId = fuelType.Id,
@@ -348,7 +338,7 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
             volume = 20m,
             unit = "L",
             pricePerUnit = 6.7m,
-            odometerKm = 100_500, // < 101000
+            odometerKm = 100_500,
             isFullTank = true,
             station = "Stacja 2"
         };
@@ -375,7 +365,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         var older = today.AddDays(-10);
         var newer = today.AddDays(-2);
 
-        // starsze tankowanie
         var bodyOld = new
         {
             fuelTypeId = fuelType.Id,
@@ -390,7 +379,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         var respOld = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/fuel-entries", bodyOld);
         respOld.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // nowsze tankowanie
         var bodyNew = new
         {
             fuelTypeId = fuelType.Id,
@@ -405,7 +393,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         var respNew = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/fuel-entries", bodyNew);
         respNew.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // GET z zakresem od (today-5) do dziś -> tylko newer
         var from = today.AddDays(-5);
         var to = today;
 
@@ -415,7 +402,7 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         var list = await getResp.Content.ReadFromJsonAsync<List<FuelEntryListItemDto>>();
         list.Should().NotBeNull();
 
-        list!.Should().ContainSingle(); // tylko jedno
+        list!.Should().ContainSingle();
         list[0].Date.Should().Be(newer);
         list[0].Station.Should().Be("Nowa stacja");
     }
@@ -423,14 +410,10 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task CreateFuelEntry_When_GlobalPaliwoCategoryExists_Should_Create_Expense()
     {
-        // arrange
         var token = await RegisterAndLoginAsync();
         var vehicle = await CreateVehicleAsync(token, "Auto z kategorią Paliwo");
         var fuelType = await CreateFuelTypeAsync("PB95", "L");
         await AssignFuelTypeToVehicleAsync(vehicle.Id, fuelType.Id, token);
-
-        // UWAGA: globalna kategoria "Paliwo" jest już zasiana przez seeda,
-        // nie musimy jej tworzyć ręcznie.
 
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
@@ -452,7 +435,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
             station = "Demo Ładowarka / Stacja"
         };
 
-        // act: POST fuel-entries -> powinno zwrócić DTO wydatku
         var resp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/fuel-entries", body);
         resp.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -465,7 +447,6 @@ public class FuelEntriesTests : IClassFixture<CustomWebApplicationFactory>
         created.Category.Name.ToLower().Should().Be("paliwo");
         created.CreatedByName.Should().NotBeNullOrWhiteSpace();
 
-        // dodatkowo: GET /vehicles/{id}/expenses powinno zawierać ten wydatek
         var getExpResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/expenses");
         getExpResp.StatusCode.Should().Be(HttpStatusCode.OK);
 

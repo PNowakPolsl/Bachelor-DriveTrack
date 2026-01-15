@@ -110,10 +110,8 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
 
     var resp = await _client.PostAsJsonAsync("/categories", body);
 
-    // Dopuszczamy Created albo Conflict (już istnieje)
     resp.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
 
-    // Teraz pobieramy listę kategorii i wybieramy tę o danej nazwie
     var url = "/categories";
     if (ownerUserId is not null)
     {
@@ -181,7 +179,6 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
             odometerKm = 101000
         };
 
-        // act 1: tworzymy wydatek
         var createResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/expenses", body);
 
         createResp.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -193,7 +190,6 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
         created.Category.Name.Should().Be("Serwis");
         created.CreatedByName.Should().NotBeNullOrWhiteSpace();
 
-        // act 2: pobieramy listę wydatków
         var listResp = await _client.GetAsync($"/vehicles/{vehicle.Id}/expenses");
         listResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -218,7 +214,6 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
 
         var category = await CreateCategoryAsync("BezTokena");
 
-        // brak Authorization header
         _client.DefaultRequestHeaders.Authorization = null;
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
@@ -240,13 +235,11 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task CreateExpense_For_ForeignVehicle_Should_Return_403()
     {
-        // user1: ma auto
         var token1 = await RegisterAndLoginAsync("u1");
         var vehicle1 = await CreateVehicleAsync(token1, "Auto user1");
 
         var category = await CreateCategoryAsync("ObcyWydatek");
 
-        // user2: próbuje dodać wydatek do auta user1
         var token2 = await RegisterAndLoginAsync("u2");
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token2);
@@ -283,7 +276,7 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
         {
             categoryId = category.Id,
             date = today,
-            amount = 0m, // <= 0 -> BadRequest
+            amount = 0m,
             description = "Zły wydatek",
             odometerKm = 100500
         };
@@ -308,7 +301,6 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        // 1) pierwszy wydatek z większym przebiegiem
         var body1 = new
         {
             categoryId = category.Id,
@@ -321,14 +313,13 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
         var resp1 = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/expenses", body1);
         resp1.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // 2) drugi wydatek z mniejszym przebiegiem -> powinno zwrócić 400
         var body2 = new
         {
             categoryId = category.Id,
             date = today,
             amount = 150m,
             description = "Drugi serwis",
-            odometerKm = 100500 // mniejszy niż 101000
+            odometerKm = 100500
         };
 
         var resp2 = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/expenses", body2);
@@ -351,7 +342,6 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        // wydatek paliwo
         var fuelBody = new
         {
             categoryId = catFuel.Id,
@@ -363,7 +353,6 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
         var fuelResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/expenses", fuelBody);
         fuelResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // wydatek serwis
         var serviceBody = new
         {
             categoryId = catService.Id,
@@ -375,7 +364,6 @@ public class ExpensesTests : IClassFixture<CustomWebApplicationFactory>
         var serviceResp = await _client.PostAsJsonAsync($"/vehicles/{vehicle.Id}/expenses", serviceBody);
         serviceResp.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        // GET z filtrem categoryId = catFuel.Id
         var resp = await _client.GetAsync($"/vehicles/{vehicle.Id}/expenses?categoryId={catFuel.Id}");
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
